@@ -69,7 +69,7 @@ export default function Footer() {
                 <Phone size={18} color="#fbbf24" />
                 <span>9050951046</span>
               </a>
-              <a href="mailto:alcazo@gmail.com" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#9ca3af', textDecoration: 'none' }}>
+              <a href="mailto:sakibfatih107@gmail.com" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#9ca3af', textDecoration: 'none' }}>
                 <Mail size={18} color="#fbbf24" />
                 <span>sakibfatih107@gmail.com</span>
               </a>
