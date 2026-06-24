@@ -71,7 +71,7 @@ export default function Footer() {
               </a>
               <a href="mailto:alcazo@gmail.com" style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#9ca3af', textDecoration: 'none' }}>
                 <Mail size={18} color="#fbbf24" />
-                <span>alcazo@gmail.com</span>
+                <span>sakibfatih107@gmail.com</span>
               </a>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px', color: '#9ca3af' }}>
                 <MapPin size={18} color="#fbbf24" />
