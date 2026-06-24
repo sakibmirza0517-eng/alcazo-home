@@ -10,7 +10,7 @@ const faqs = [
   },
   { 
     question: "Are the professionals verified?", 
-    answer: "Yes! All professionals on Alcazo go through a strict verification process including Aadhaar verification, skill assessment, and background checks." 
+    answer: "Yes! All professionals on Alcazo go through a strict verification process including skill assessment and background checks." 
   },
   { 
     question: "What areas do you serve?", 
@@ -18,11 +18,11 @@ const faqs = [
   },
   { 
     question: "How do I pay for the service?", 
-    answer: "We accept UPI, credit/debit cards, net banking, and cash payments. You can pay online or directly to the professional after work completion." 
+    answer: "We accept cash payments. You can pay online or directly to the professional after work completion at your respective site." 
   },
   { 
     question: "What if I'm not satisfied?", 
-    answer: "We have a satisfaction guarantee. Contact our support team within 24 hours and we'll make it right or refund your money." 
+    answer: "We are working on our website and we will soon add a service and complaint box." 
   }
 ];
 
