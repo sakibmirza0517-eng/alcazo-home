@@ -164,7 +164,7 @@ export default function HeroSection() {
                 </div>
               </a>
               
-              <a href="mailto:alcazo@gmail.com" style={{
+              <a href="mailto:sakibfatih107@gmail.com" style={{
                 display: 'flex',
                 alignItems: 'center',
                 gap: '12px',
@@ -185,7 +185,7 @@ export default function HeroSection() {
                 </div>
                 <div>
                   <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>Email Us</div>
-                  <div>alcazo@gmail.com</div>
+                  <div>sakibfatih107@gmail.com</div>
                 </div>
               </a>
             </div>
