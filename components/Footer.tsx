@@ -44,14 +44,14 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Column 2: Quick Links */}
+          {/* Column 2: Quick Links - ✅ FIXED: /book se /book-service kar diya */}
           <div style={{ flex: '1 1 200px' }}>
             <h4 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '20px', color: '#fbbf24' }}>Quick Links</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { href: '/', label: 'Home' },
                 { href: '/services', label: 'Services' },
-                { href: '/book', label: 'Book Service' },
+                { href: '/book-service', label: 'Book Service' },
                 { href: '/register', label: 'Become a Pro' }
               ].map((link, i) => (
                 <Link key={i} href={link.href} style={{ color: '#9ca3af', textDecoration: 'none', fontSize: '0.95rem', transition: 'color 0.2s' }}>
@@ -61,7 +61,7 @@ export default function Footer() {
             </div>
           </div>
 
-          {/* Column 3: Contact */}
+          {/* Column 3: Contact - ✅ FIXED: Email update kar diya */}
           <div style={{ flex: '1 1 300px' }}>
             <h4 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '20px', color: '#fbbf24' }}>Contact Us</h4>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
