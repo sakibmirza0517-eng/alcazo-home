@@ -197,7 +197,7 @@ export default function HowItWorks() {
         {/* CTA Button */}
         <div style={{ textAlign: 'center', marginTop: '64px' }}>
           <Link
-            href="/book"
+            href="/book-service"
             style={{
               display: 'inline-flex',
               alignItems: 'center',
