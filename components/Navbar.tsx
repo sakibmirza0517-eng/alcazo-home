@@ -63,148 +63,170 @@ export default function Navbar() {
   const isAdmin = user?.email === "sakibfatih107@gmail.com";
 
   return (
-    <nav style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      zIndex: 1000,
-      background: scrolled ? 'rgba(255, 255, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
-      backdropFilter: 'blur(20px)',
-      borderBottom: scrolled ? '2px solid rgba(217, 119, 6, 0.2)' : '1px solid rgba(217, 119, 6, 0.1)',
-      boxShadow: scrolled ? '0 4px 20px rgba(217, 119, 6, 0.1)' : 'none',
-      transition: 'all 0.3s ease'
-    }}>
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          height: '80px'
-        }}>
-          
-          {/* Logo */}
-          <Link href="/" style={{
+    <>
+      {/* ✅ Mobile Menu Overlay - Full Screen */}
+      {isOpen && isMobile && (
+        <div 
+          onClick={() => setIsOpen(false)}
+          style={{
+            position: 'fixed',
+            top: '80px',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            backdropFilter: 'blur(4px)'
+          }}
+        />
+      )}
+
+      <nav style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        zIndex: 1000,
+        background: scrolled ? 'rgba(255, 255, 255, 0.98)' : 'rgba(255, 255, 255, 0.95)',
+        backdropFilter: 'blur(20px)',
+        borderBottom: scrolled ? '2px solid rgba(217, 119, 6, 0.2)' : '1px solid rgba(217, 119, 6, 0.1)',
+        boxShadow: scrolled ? '0 4px 20px rgba(217, 119, 6, 0.1)' : 'none',
+        transition: 'all 0.3s ease'
+      }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '0 20px' }}>
+          <div style={{
             display: 'flex',
+            justifyContent: 'space-between',
             alignItems: 'center',
-            gap: '12px',
-            textDecoration: 'none'
+            height: '80px'
           }}>
-            <div style={{
-              width: '48px',
-              height: '48px',
-              background: 'linear-gradient(135deg, #d97706, #b45309)',
-              borderRadius: '12px',
+            
+            {/* Logo */}
+            <Link href="/" style={{
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)'
+              gap: '12px',
+              textDecoration: 'none'
             }}>
-              <Hammer size={24} color="white" />
-            </div>
-            <div>
-              <h1 style={{
-                fontSize: isMobile ? '1.2rem' : '1.5rem',
-                fontWeight: '800',
-                color: '#111827',
-                margin: 0,
-                lineHeight: 1.2
+              <div style={{
+                width: '48px',
+                height: '48px',
+                background: 'linear-gradient(135deg, #d97706, #b45309)',
+                borderRadius: '12px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)'
               }}>
-                Alcazo
-              </h1>
-              {!isMobile && (
-                <p style={{
-                  fontSize: '0.7rem',
-                  color: '#d97706',
+                <Hammer size={24} color="white" />
+              </div>
+              <div>
+                <h1 style={{
+                  fontSize: isMobile ? '1.2rem' : '1.5rem',
+                  fontWeight: '800',
+                  color: '#111827',
                   margin: 0,
-                  fontWeight: '600'
+                  lineHeight: 1.2
                 }}>
-                  Expert Home Services
-                </p>
-              )}
-            </div>
-          </Link>
+                  Alcazo
+                </h1>
+                {!isMobile && (
+                  <p style={{
+                    fontSize: '0.7rem',
+                    color: '#d97706',
+                    margin: 0,
+                    fontWeight: '600'
+                  }}>
+                    Expert Home Services
+                  </p>
+                )}
+              </div>
+            </Link>
 
-          {/* Desktop Navigation - Only on Desktop */}
-          {!isMobile && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <Link href="/" style={desktopLinkStyle}>
-                <Home size={18} />
-                <span>Home</span>
-              </Link>
-              <Link href="/services" style={desktopLinkStyle}>
-                <Briefcase size={18} />
-                <span>Services</span>
-              </Link>
-              <Link href="/book-service" style={desktopLinkStyle}>
-                <Calendar size={18} />
-                <span>Book Service</span>
-              </Link>
+            {/* Desktop Navigation - Only on Desktop */}
+            {!isMobile && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Link href="/" style={desktopLinkStyle}>
+                  <Home size={18} />
+                  <span>Home</span>
+                </Link>
+                <Link href="/services" style={desktopLinkStyle}>
+                  <Briefcase size={18} />
+                  <span>Services</span>
+                </Link>
+                <Link href="/book-service" style={desktopLinkStyle}>
+                  <Calendar size={18} />
+                  <span>Book Service</span>
+                </Link>
 
-              {user ? (
-                <>
-                  {isAdmin && (
-                    <Link href="/admin" style={adminButtonStyle}>
-                      <Shield size={18} />
-                      <span>Admin</span>
+                {user ? (
+                  <>
+                    {isAdmin && (
+                      <Link href="/admin" style={adminButtonStyle}>
+                        <Shield size={18} />
+                        <span>Admin</span>
+                      </Link>
+                    )}
+                    <Link
+                      href={userData?.role === "professional" ? "/professional-dashboard" : "/dashboard"}
+                      style={dashboardButtonStyle}
+                    >
+                      <User size={18} />
+                      <span>{userData?.name ? userData.name.split(' ')[0] : "Dashboard"}</span>
                     </Link>
-                  )}
-                  <Link
-                    href={userData?.role === "professional" ? "/professional-dashboard" : "/dashboard"}
-                    style={dashboardButtonStyle}
-                  >
-                    <User size={18} />
-                    <span>{userData?.name ? userData.name.split(' ')[0] : "Dashboard"}</span>
-                  </Link>
-                  <button onClick={handleLogout} style={logoutButtonStyle}>
-                    <LogOut size={18} />
-                    <span>Logout</span>
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link href="/login" style={loginButtonStyle}>
-                    <User size={18} />
-                    <span>Login</span>
-                  </Link>
-                  <Link href="/register" style={registerButtonStyle}>
-                    Register
-                  </Link>
-                </>
-              )}
-            </div>
-          )}
+                    <button onClick={handleLogout} style={logoutButtonStyle}>
+                      <LogOut size={18} />
+                      <span>Logout</span>
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link href="/login" style={loginButtonStyle}>
+                      <User size={18} />
+                      <span>Login</span>
+                    </Link>
+                    <Link href="/register" style={registerButtonStyle}>
+                      Register
+                    </Link>
+                  </>
+                )}
+              </div>
+            )}
 
-          {/* Mobile Menu Button - Always Visible */}
-          <button
-            onClick={() => setIsOpen(!isOpen)}
-            style={{
-              display: 'flex',
-              width: '44px',
-              height: '44px',
-              background: 'rgba(217, 119, 6, 0.1)',
-              border: '2px solid rgba(217, 119, 6, 0.3)',
-              borderRadius: '12px',
-              cursor: 'pointer',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.3s ease'
-            }}
-          >
-            {isOpen ? <X size={24} color="#d97706" /> : <Menu size={24} color="#d97706" />}
-          </button>
+            {/* Mobile Menu Button - Always Visible */}
+            <button
+              onClick={() => setIsOpen(!isOpen)}
+              style={{
+                display: 'flex',
+                width: '44px',
+                height: '44px',
+                background: 'rgba(217, 119, 6, 0.1)',
+                border: '2px solid rgba(217, 119, 6, 0.3)',
+                borderRadius: '12px',
+                cursor: 'pointer',
+                alignItems: 'center',
+                justifyContent: 'center',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              {isOpen ? <X size={24} color="#d97706" /> : <Menu size={24} color="#d97706" />}
+            </button>
+          </div>
         </div>
 
-        {/* ✅ Mobile Menu - FIXED & IMPROVED */}
-        {isOpen && (
+        {/* ✅ Mobile Menu - FIXED: Position Absolute, Full Width */}
+        {isOpen && isMobile && (
           <div style={{
+            position: 'absolute',
+            top: '80px',
+            left: 0,
+            right: 0,
             background: 'white',
-            borderRadius: '16px',
-            padding: '16px',
-            marginBottom: '16px',
-            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-            border: '2px solid rgba(217, 119, 6, 0.2)',
-            maxHeight: 'calc(100vh - 100px)',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.2)',
+            borderBottom: '2px solid rgba(217, 119, 6, 0.2)',
+            zIndex: 1001,
+            padding: '16px 20px',
+            maxHeight: 'calc(100vh - 80px)',
             overflowY: 'auto'
           }}>
             {/* Common Links */}
@@ -213,7 +235,7 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)} 
               style={mobileLinkStyle}
             >
-              <Home size={20} />
+              <Home size={20} color="#d97706" />
               <span>Home</span>
             </Link>
 
@@ -222,7 +244,7 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)} 
               style={mobileLinkStyle}
             >
-              <Briefcase size={20} />
+              <Briefcase size={20} color="#d97706" />
               <span>Services</span>
             </Link>
 
@@ -231,7 +253,7 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)} 
               style={mobileLinkStyle}
             >
-              <Calendar size={20} />
+              <Calendar size={20} color="#d97706" />
               <span>Book a Service</span>
             </Link>
 
@@ -240,7 +262,7 @@ export default function Navbar() {
               onClick={() => setIsOpen(false)} 
               style={mobileLinkStyle}
             >
-              <Briefcase size={20} />
+              <Briefcase size={20} color="#d97706" />
               <span>Become a Professional</span>
             </Link>
 
@@ -254,7 +276,6 @@ export default function Navbar() {
             {/* Conditional Auth Buttons */}
             {user ? (
               <>
-                {/* Logged IN User */}
                 {isAdmin && (
                   <Link 
                     href="/admin" 
@@ -263,11 +284,10 @@ export default function Navbar() {
                       ...mobileLinkStyle,
                       background: '#111827',
                       color: 'white',
-                      fontWeight: '700',
-                      border: 'none'
+                      fontWeight: '700'
                     }}
                   >
-                    <Shield size={20} />
+                    <Shield size={20} color="white" />
                     <span>Admin Panel</span>
                   </Link>
                 )}
@@ -283,7 +303,7 @@ export default function Navbar() {
                     background: 'rgba(217, 119, 6, 0.05)'
                   }}
                 >
-                  <User size={20} />
+                  <User size={20} color="#d97706" />
                   <span>Dashboard</span>
                 </Link>
 
@@ -299,13 +319,12 @@ export default function Navbar() {
                     width: '100%'
                   }}
                 >
-                  <LogOut size={20} />
+                  <LogOut size={20} color="#dc2626" />
                   <span>Logout</span>
                 </button>
               </>
             ) : (
               <>
-                {/* Logged OUT User */}
                 <Link
                   href="/login"
                   onClick={() => setIsOpen(false)}
@@ -317,7 +336,7 @@ export default function Navbar() {
                     background: 'rgba(217, 119, 6, 0.05)'
                   }}
                 >
-                  <User size={20} />
+                  <User size={20} color="#d97706" />
                   <span>Login</span>
                 </Link>
 
@@ -332,16 +351,15 @@ export default function Navbar() {
                     border: 'none'
                   }}
                 >
-                  <User size={20} />
+                  <User size={20} color="white" />
                   <span>Register</span>
                 </Link>
               </>
             )}
           </div>
         )}
-
-      </div>
-    </nav>
+      </nav>
+    </>
   );
 }
 
