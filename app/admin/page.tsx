@@ -8,7 +8,7 @@ import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { 
   LayoutDashboard, UserPlus, Users, Clock, UserCheck, 
-  LogOut, Hammer, Shield, AlertCircle 
+  LogOut, Hammer, Shield, AlertCircle, Briefcase 
 } from "lucide-react";
 
 export default function AdminDashboard() {
