@@ -50,7 +50,7 @@ export default function Footer() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {[
                 { href: '/', label: 'Home' },
-                { href: '/services', label: 'Services' },
+                { href: '/professionals', label: 'Services' },
                 { href: '/book-service', label: 'Book Service' },
                 { href: '/register', label: 'Become a Pro' }
               ].map((link, i) => (
