@@ -1,10 +1,23 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Phone, Mail, Shield, Hammer, ArrowRight } from "lucide-react";
+import { Phone, Mail, Shield, Hammer, ArrowRight, User, LayoutDashboard } from "lucide-react";
+import { auth } from "@/lib/firebase";
+import { onAuthStateChanged } from "firebase/auth";
 
 export default function HeroSection() {
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
     <section style={{
       minHeight: '100vh',
@@ -25,7 +38,7 @@ export default function HeroSection() {
         height: '400px',
         background: 'rgba(217, 119, 6, 0.1)',
         borderRadius: '50%',
-        blur: '100px'
+        filter: 'blur(100px)'
       }} />
       
       <div style={{ maxWidth: '1280px', margin: '0 auto', width: '100%' }}>
@@ -80,13 +93,14 @@ export default function HeroSection() {
               Professional carpenters, plumbers, electricians and skilled workers at your doorstep in Karnal. Quality craftsmanship guaranteed.
             </p>
 
-            {/* Buttons */}
+            {/* ✅ Buttons - CONDITIONAL RENDERING */}
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '16px',
               marginBottom: '48px'
             }}>
+              {/* Button 1: Book a Service (Always Visible) */}
               <Link 
                 href="/book-service"
                 style={{
@@ -108,7 +122,55 @@ export default function HeroSection() {
                 <span>Book a Service</span>
                 <ArrowRight size={20} />
               </Link>
+
+              {/* ✅ Button 2: Conditional - Login/Register OR Dashboard */}
+              {user ? (
+                <Link 
+                  href="/dashboard"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '16px 32px',
+                    background: '#111827',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '1.125rem',
+                    textDecoration: 'none',
+                    boxShadow: '0 10px 30px rgba(17, 24, 39, 0.3)',
+                    transition: 'all 0.3s ease',
+                    width: 'fit-content'
+                  }}
+                >
+                  <LayoutDashboard size={20} />
+                  <span>Go to Dashboard</span>
+                </Link>
+              ) : (
+                <Link 
+                  href="/login"
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '16px 32px',
+                    background: '#111827',
+                    color: 'white',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '1.125rem',
+                    textDecoration: 'none',
+                    boxShadow: '0 10px 30px rgba(17, 24, 39, 0.3)',
+                    transition: 'all 0.3s ease',
+                    width: 'fit-content'
+                  }}
+                >
+                  <User size={20} />
+                  <span>Login / Register</span>
+                </Link>
+              )}
               
+              {/* Button 3: Become a Professional (Always Visible) */}
               <Link 
                 href="/register"
                 style={{
