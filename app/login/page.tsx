@@ -8,7 +8,8 @@ import { auth, db } from "@/lib/firebase";
 import { 
   signInWithEmailAndPassword, 
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signOut
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
@@ -50,43 +51,41 @@ export default function LoginPage() {
     }
   };
 
-  // 🔵 GOOGLE SIGN-IN FUNCTION
+  // 🔵 GOOGLE SIGN-IN FUNCTION - WITH EXISTING USER CHECK
   const handleGoogleSignIn = async () => {
     setLoading(true);
     const provider = new GoogleAuthProvider();
+    
+    // Force account selection
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
 
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Check if user exists in Firestore
+      // ✅ CHECK IF USER EXISTS IN FIRESTORE
       const userDoc = await getDoc(doc(db, "users", user.uid));
       
       if (!userDoc.exists()) {
-        // New user - create document
-        await setDoc(doc(db, "users", user.uid), {
-          uid: user.uid,
-          name: user.displayName || user.email?.split('@')[0] || "User",
-          email: user.email,
-          phone: user.phoneNumber || "",
-          role: "customer", // Default role
-          photoURL: user.photoURL || "",
-          emailVerified: user.emailVerified,
-          createdAt: serverTimestamp(),
-          lastLogin: serverTimestamp()
-        });
-        alert("✅ Welcome to Alcazo! Your account has been created.");
-      } else {
-        // Existing user - update last login
-        await setDoc(doc(db, "users", user.uid), {
-          lastLogin: serverTimestamp()
-        }, { merge: true });
-        alert("✅ Login Successful! Welcome back!");
+        // ❌ User nahi mila - logout karo aur error dikhao
+        await signOut(auth);
+        alert("❌ Account not found! Please register first.");
+        router.push("/register");
+        return;
       }
 
-      // Redirect based on role
-      const userData = (await getDoc(doc(db, "users", user.uid))).data();
-      const role = userData?.role || "customer";
+      // ✅ User mila - login karo
+      const userData = userDoc.data();
+      const role = userData.role;
+
+      // Update last login
+      await setDoc(doc(db, "users", user.uid), {
+        lastLogin: serverTimestamp()
+      }, { merge: true });
+
+      alert("✅ Login Successful! Welcome back!");
 
       if (role === "professional") {
         router.push("/professional-dashboard");
@@ -98,7 +97,14 @@ export default function LoginPage() {
 
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
-      alert("❌ Google Sign-In Failed: " + error.message);
+      
+      if (error.code === 'auth/popup-blocked') {
+        alert("⚠️ Popup was blocked. Please allow popups for this site and try again.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // User closed popup - no error
+      } else {
+        alert("❌ Google Sign-In Failed: " + error.message);
+      }
     } finally {
       setLoading(false);
     }
