@@ -1,5 +1,6 @@
 "use client";
 
+import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -158,14 +159,167 @@ function DashboardTab() {
 }
 
 function AddProfessionalTab() {
+  const [formData, setFormData] = useState({
+    name: "",
+    phone: "",
+    category: "Carpenter",
+    skills: "",
+    location: "Karnal"
+  });
+  const [loading, setLoading] = useState(false);
+
+  const categories = [
+    "Carpenter", "Plumber", "Electrician", "Painter", 
+    "AC Service", "Interior Design", "Furniture Repair", 
+    "Pest Control", "Tile & Flooring"
+  ];
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Firestore mein data save karo
+      await addDoc(collection(db, "professionals"), {
+        ...formData,
+        status: "approved", // Admin add kar raha hai, isliye direct approved
+        isActive: true,
+        addedBy: "admin",
+        createdAt: serverTimestamp()
+      });
+
+      alert("✅ Professional added successfully! Live on website.");
+      
+      // Form reset karo
+      setFormData({
+        name: "",
+        phone: "",
+        category: "Carpenter",
+        skills: "",
+        location: "Karnal"
+      });
+    } catch (error) {
+      console.error("Error adding professional:", error);
+      alert("❌ Failed to add professional. Check console.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-      <UserPlus size={48} color="#d97706" style={{ marginBottom: '16px' }} />
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Add New Professional</h2>
-      <p style={{ color: '#6b7280' }}>Form will be implemented in the next step.</p>
+    <div style={{ maxWidth: '600px', margin: '0 auto' }}>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
+        Add New Professional
+      </h2>
+      <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>
+        Fill the details below. This professional will be directly approved and visible on the website.
+      </p>
+
+      <form onSubmit={handleSubmit}>
+        {/* Name */}
+        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Full Name</label>
+        <input
+          type="text"
+          name="name"
+          value={formData.name}
+          onChange={handleChange}
+          required
+          placeholder="e.g. Rahul Sharma"
+          style={inputStyle}
+        />
+
+        {/* Phone */}
+        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Phone Number</label>
+        <input
+          type="tel"
+          name="phone"
+          value={formData.phone}
+          onChange={handleChange}
+          required
+          placeholder="e.g. 9876543210"
+          style={inputStyle}
+        />
+
+        {/* Category */}
+        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Service Category</label>
+        <select
+          name="category"
+          value={formData.category}
+          onChange={handleChange}
+          style={inputStyle}
+        >
+          {categories.map((cat) => (
+            <option key={cat} value={cat}>{cat}</option>
+          ))}
+        </select>
+
+        {/* Skills */}
+        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Skills / Experience</label>
+        <textarea
+          name="skills"
+          value={formData.skills}
+          onChange={handleChange}
+          required
+          placeholder="e.g. 5 years experience in modular furniture..."
+          rows={3}
+          style={{...inputStyle, resize: 'vertical'}}
+        />
+
+        {/* Location */}
+        <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Location</label>
+        <input
+          type="text"
+          name="location"
+          value={formData.location}
+          onChange={handleChange}
+          required
+          placeholder="e.g. Karnal, Sector 12"
+          style={inputStyle}
+        />
+
+        {/* Submit Button */}
+        <button
+          type="submit"
+          disabled={loading}
+          style={{
+            width: '100%',
+            padding: '14px',
+            background: loading ? '#9ca3af' : 'linear-gradient(135deg, #d97706, #b45309)',
+            color: 'white',
+            border: 'none',
+            borderRadius: '10px',
+            fontWeight: '700',
+            fontSize: '1rem',
+            cursor: loading ? 'not-allowed' : 'pointer',
+            marginTop: '10px',
+            boxShadow: '0 8px 20px rgba(217, 119, 6, 0.3)',
+            transition: 'all 0.3s ease'
+          }}
+        >
+          {loading ? "Adding Professional..." : "Add & Approve Professional"}
+        </button>
+      </form>
     </div>
   );
 }
+
+// Input Style (Isko bhi file ke sabse niche add kar de)
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  border: '2px solid #e5e7eb',
+  borderRadius: '10px',
+  fontSize: '1rem',
+  outline: 'none',
+  boxSizing: 'border-box',
+  marginBottom: '16px',
+  background: '#fafafa',
+  transition: 'border 0.3s ease'
+};
 
 function ManageProsTab() {
   return (
