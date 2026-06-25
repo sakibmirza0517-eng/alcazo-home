@@ -1,13 +1,11 @@
 "use client";
 
-import { getDocs, query, where, collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc, deleteDoc } from "firebase/firestore";
 import { 
   LayoutDashboard, UserPlus, Users, Clock, UserCheck, 
   LogOut, Hammer, Shield, AlertCircle 
@@ -19,13 +17,11 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("dashboard");
 
-  // 1. Security & Auth Check
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.push("/login");
       } else if (currentUser.email !== "sakibfatih107@gmail.com") {
-        // Agar koi aur admin panel kholne ki koshish kare
         alert("Access Denied! You are not an admin.");
         router.push("/");
       } else {
@@ -36,13 +32,11 @@ export default function AdminDashboard() {
     return () => unsubscribe();
   }, [router]);
 
-  // 2. Logout Function
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/");
   };
 
-  // 3. Tabs Configuration
   const tabs = [
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "add", label: "Add Professional", icon: UserPlus },
@@ -51,7 +45,6 @@ export default function AdminDashboard() {
     { id: "users", label: "Users", icon: UserCheck },
   ];
 
-  // Loading State
   if (loading) {
     return (
       <div style={{
@@ -66,7 +59,6 @@ export default function AdminDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', paddingTop: '80px' }}>
       
-      {/* Top Header */}
       <header style={{
         position: 'fixed', top: 0, left: 0, right: 0, height: '80px',
         background: 'white', borderBottom: '2px solid rgba(217, 119, 6, 0.2)',
@@ -95,10 +87,8 @@ export default function AdminDashboard() {
         </button>
       </header>
 
-      {/* Main Content Area */}
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         
-        {/* Tabs Navigation (Mobile Friendly - Horizontal Scroll) */}
         <div style={{
           display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '10px',
           marginBottom: '20px', borderBottom: '2px solid #e5e7eb'
@@ -123,7 +113,6 @@ export default function AdminDashboard() {
           ))}
         </div>
 
-        {/* Tab Content Area */}
         <div style={{
           background: 'white', borderRadius: '16px', padding: '30px',
           boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)', border: '1px solid #f3f4f6'
@@ -141,8 +130,7 @@ export default function AdminDashboard() {
   );
 }
 
-// --- TAB COMPONENTS (Placeholders for now) ---
-
+// DASHBOARD TAB
 function DashboardTab() {
   return (
     <div>
@@ -159,6 +147,7 @@ function DashboardTab() {
   );
 }
 
+// ADD PROFESSIONAL TAB
 function AddProfessionalTab() {
   const [formData, setFormData] = useState({
     name: "",
@@ -184,10 +173,9 @@ function AddProfessionalTab() {
     setLoading(true);
 
     try {
-      // Firestore mein data save karo
       await addDoc(collection(db, "professionals"), {
         ...formData,
-        status: "approved", // Admin add kar raha hai, isliye direct approved
+        status: "approved",
         isActive: true,
         addedBy: "admin",
         createdAt: serverTimestamp()
@@ -195,7 +183,6 @@ function AddProfessionalTab() {
 
       alert("✅ Professional added successfully! Live on website.");
       
-      // Form reset karo
       setFormData({
         name: "",
         phone: "",
@@ -221,7 +208,6 @@ function AddProfessionalTab() {
       </p>
 
       <form onSubmit={handleSubmit}>
-        {/* Name */}
         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Full Name</label>
         <input
           type="text"
@@ -233,7 +219,6 @@ function AddProfessionalTab() {
           style={inputStyle}
         />
 
-        {/* Phone */}
         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Phone Number</label>
         <input
           type="tel"
@@ -245,7 +230,6 @@ function AddProfessionalTab() {
           style={inputStyle}
         />
 
-        {/* Category */}
         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Service Category</label>
         <select
           name="category"
@@ -258,7 +242,6 @@ function AddProfessionalTab() {
           ))}
         </select>
 
-        {/* Skills */}
         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Skills / Experience</label>
         <textarea
           name="skills"
@@ -270,7 +253,6 @@ function AddProfessionalTab() {
           style={{...inputStyle, resize: 'vertical'}}
         />
 
-        {/* Location */}
         <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: '600', color: '#374151', marginBottom: '6px' }}>Location</label>
         <input
           type="text"
@@ -282,7 +264,6 @@ function AddProfessionalTab() {
           style={inputStyle}
         />
 
-        {/* Submit Button */}
         <button
           type="submit"
           disabled={loading}
@@ -308,30 +289,15 @@ function AddProfessionalTab() {
   );
 }
 
-// Input Style (Isko bhi file ke sabse niche add kar de)
-const inputStyle = {
-  width: '100%',
-  padding: '12px',
-  border: '2px solid #e5e7eb',
-  borderRadius: '10px',
-  fontSize: '1rem',
-  outline: 'none',
-  boxSizing: 'border-box',
-  marginBottom: '16px',
-  background: '#fafafa',
-  transition: 'border 0.3s ease'
-};
-
+// MANAGE PROFESSIONALS TAB - FIXED VERSION
 function ManageProsTab() {
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Data fetch karna jab tab open ho
   useEffect(() => {
     const fetchProfessionals = async () => {
       setLoading(true);
       try {
-        // Sirf approved professionals fetch karo
         const q = query(collection(db, "professionals"), where("status", "==", "approved"));
         const querySnapshot = await getDocs(q);
         
@@ -349,14 +315,12 @@ function ManageProsTab() {
     fetchProfessionals();
   }, []);
 
-  // Professional ko Hide/Deactivate karna
   const handleDeactivate = async (id: string, currentStatus: boolean) => {
     if (!window.confirm("Kya aap is professional ko website se hide karna chahte hain?")) return;
     
     try {
       await updateDoc(doc(db, "professionals", id), { isActive: !currentStatus });
       alert("✅ Status updated successfully!");
-      // List refresh karne ke liye page reload (simple tareeka)
       window.location.reload(); 
     } catch (error) {
       console.error("Error updating status:", error);
@@ -364,9 +328,8 @@ function ManageProsTab() {
     }
   };
 
-  // Professional ko Delete karna
   const handleDelete = async (id: string) => {
-    if (!window.confirm("⚠️ WARNING: Kya aap is professional ko hamesha ke liye DELETE karna chahte hain? Ye action undo nahi hoga!")) return;
+    if (!window.confirm("⚠️ WARNING: Kya aap is professional ko hamesha ke liye DELETE karna chahte hain?")) return;
     
     try {
       await deleteDoc(doc(db, "professionals", id));
@@ -386,12 +349,12 @@ function ManageProsTab() {
         Manage Professionals
       </h2>
       <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>
-        Total Approved: {professionals.length} | Yahan se aap workers ko hide ya delete kar sakte hain.
+        Total Approved: {professionals.length}
       </p>
 
       {professionals.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '40px', background: '#f9fafb', borderRadius: '12px' }}>
-          <p style={{ color: '#9ca3af' }}>Koi approved professional nahi mila.</p>
+          <p style={{ color: '#9ca3af' }}>Koi approved professional nahi mila. Pehle "Add Professional" tab se add karein.</p>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
@@ -448,6 +411,29 @@ function ManageProsTab() {
   );
 }
 
+// PENDING TAB
+function PendingTab() {
+  return (
+    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+      <Clock size={48} color="#d97706" style={{ marginBottom: '16px' }} />
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Pending Approvals</h2>
+      <p style={{ color: '#6b7280' }}>New registration requests will appear here.</p>
+    </div>
+  );
+}
+
+// USERS TAB
+function UsersTab() {
+  return (
+    <div style={{ textAlign: 'center', padding: '40px 0' }}>
+      <UserCheck size={48} color="#d97706" style={{ marginBottom: '16px' }} />
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Registered Users</h2>
+      <p style={{ color: '#6b7280' }}>Customer list will appear here.</p>
+    </div>
+  );
+}
+
+// INPUT STYLE
 const inputStyle = {
   width: '100%',
   padding: '12px',
@@ -460,23 +446,3 @@ const inputStyle = {
   background: '#fafafa',
   transition: 'border 0.3s ease'
 };
-
-function PendingTab() {
-  return (
-    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-      <Clock size={48} color="#d97706" style={{ marginBottom: '16px' }} />
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Pending Approvals</h2>
-      <p style={{ color: '#6b7280' }}>New registration requests will appear here.</p>
-    </div>
-  );
-}
-
-function UsersTab() {
-  return (
-    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-      <UserCheck size={48} color="#d97706" style={{ marginBottom: '16px' }} />
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Registered Users</h2>
-      <p style={{ color: '#6b7280' }}>Customer list will appear here.</p>
-    </div>
-  );
-}
