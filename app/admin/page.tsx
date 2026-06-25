@@ -11,7 +11,7 @@ import {
 } from "firebase/firestore";
 import { 
   LayoutDashboard, UserPlus, Users, Clock, UserCheck, 
-  LogOut, Hammer, Shield, AlertCircle, Briefcase 
+  LogOut, Hammer, Shield, AlertCircle, Briefcase, ArrowLeft 
 } from "lucide-react";
 
 export default function AdminDashboard() {
