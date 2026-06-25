@@ -150,7 +150,7 @@ export default function Navbar() {
                   <Home size={18} />
                   <span>Home</span>
                 </Link>
-                <Link href="/services" style={desktopLinkStyle}>
+                <Link href="/professionals" style={desktopLinkStyle}>
                   <Briefcase size={18} />
                   <span>Services</span>
                 </Link>
@@ -240,7 +240,7 @@ export default function Navbar() {
             </Link>
 
             <Link 
-              href="/services" 
+              href="/professionals" 
               onClick={() => setIsOpen(false)} 
               style={mobileLinkStyle}
             >
