@@ -541,12 +541,168 @@ function PendingTab() {
 }
 
 // USERS TAB
+// USERS TAB - Registered Customers
 function UsersTab() {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      try {
+        // Saare users fetch karo (customers + professionals)
+        const q = query(collection(db, "users"));
+        const querySnapshot = await getDocs(q);
+        
+        const usersList: any[] = [];
+        querySnapshot.forEach((doc) => {
+          usersList.push({ id: doc.id, ...doc.data() });
+        });
+        setUsers(usersList);
+      } catch (error) {
+        console.error("Error fetching users:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchUsers();
+  }, []);
+
+  // User ko block/unblock karne ka function
+  const handleToggleBlock = async (userId: string, currentBlocked: boolean) => {
+    const action = currentBlocked ? "unblock" : "block";
+    if (!window.confirm(`Kya aap is user ko ${action} karna chahte hain?`)) return;
+    
+    try {
+      await updateDoc(doc(db, "users", userId), { 
+        isBlocked: !currentBlocked 
+      });
+      alert(`✅ User ${action === "block" ? "blocked" : "unblocked"} successfully!`);
+      window.location.reload(); 
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      alert("❌ Failed to update user status.");
+    }
+  };
+
+  if (loading) return <p style={{textAlign: 'center', color: '#6b7280'}}>Loading users...</p>;
+
+  // Customers aur Professionals ko alag karo
+  const customers = users.filter(u => u.role === "customer");
+  const professionals = users.filter(u => u.role === "professional");
+
   return (
-    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-      <UserCheck size={48} color="#d97706" style={{ marginBottom: '16px' }} />
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Registered Users</h2>
-      <p style={{ color: '#6b7280' }}>Customer list will appear here.</p>
+    <div>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
+        Registered Users
+      </h2>
+      <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>
+        Total Users: {users.length} | Customers: {customers.length} | Professionals: {professionals.length}
+      </p>
+
+      {/* Customers Section */}
+      <div style={{ marginBottom: '40px' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#d97706', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <UserCheck size={20} />
+          Customers ({customers.length})
+        </h3>
+
+        {customers.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px', background: '#f9fafb', borderRadius: '12px' }}>
+            <p style={{ color: '#9ca3af' }}>Abhi tak koi customer register nahi hua.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {customers.map((user) => (
+              <div key={user.id} style={{
+                background: 'white', border: '1px solid #e5e7eb', borderRadius: '12px',
+                padding: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#111827', margin: 0 }}>{user.name}</h4>
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '4px 0 0' }}>{user.email}</p>
+                  </div>
+                  {user.isBlocked && (
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '700',
+                      background: '#fee2e2', color: '#dc2626'
+                    }}>
+                      Blocked
+                    </span>
+                  )}
+                </div>
+                
+                <p style={{ fontSize: '0.9rem', color: '#4b5563', marginBottom: '8px' }}>📞 {user.phone}</p>
+                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '12px' }}>
+                  Joined: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                </p>
+
+                <button
+                  onClick={() => handleToggleBlock(user.id, user.isBlocked || false)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    background: user.isBlocked ? '#dcfce7' : '#fee2e2',
+                    color: user.isBlocked ? '#166534' : '#dc2626',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {user.isBlocked ? 'Unblock User' : 'Block User'}
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Professionals Section */}
+      <div>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#d97706', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <Briefcase size={20} />
+          Professionals ({professionals.length})
+        </h3>
+
+        {professionals.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '30px', background: '#f9fafb', borderRadius: '12px' }}>
+            <p style={{ color: '#9ca3af' }}>Abhi tak koi professional register nahi hua.</p>
+          </div>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+            {professionals.map((user) => (
+              <div key={user.id} style={{
+                background: 'white', border: '1px solid #fcd34d', borderRadius: '12px',
+                padding: '16px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                  <div>
+                    <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#111827', margin: 0 }}>{user.name}</h4>
+                    <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '4px 0 0' }}>{user.email}</p>
+                  </div>
+                  <span style={{
+                    padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '700',
+                    background: '#fef3c7', color: '#92400e'
+                  }}>
+                    Pro
+                  </span>
+                </div>
+                
+                <p style={{ fontSize: '0.9rem', color: '#4b5563', marginBottom: '8px' }}>📞 {user.phone}</p>
+                <p style={{ fontSize: '0.85rem', color: '#d97706', marginBottom: '8px', fontWeight: '600' }}>
+                  🔧 {user.service || 'Not specified'}
+                </p>
+                <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '12px' }}>
+                  Joined: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
