@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { Hammer, User, Briefcase, ArrowLeft } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { createUserWithEmailAndPassword, sendEmailVerification } from "firebase/auth";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -33,18 +33,17 @@ export default function RegisterPage() {
       console.log("✅ Step 1 Complete: User created -", user.email);
       console.log("🔵 Step 2: Sending verification email...");
 
-      // 📧 EMAIL VERIFICATION
+      // 📧 EMAIL VERIFICATION (Optional - agar email nahi ja raha toh ignore karo)
       try {
         await sendEmailVerification(user);
         console.log("✅ Step 2 Complete: Verification email sent to", user.email);
       } catch (emailError) {
         console.error("❌ Email sending failed:", emailError);
-        // Email fail hone par bhi aage badhenge
       }
 
       console.log("🔵 Step 3: Saving to Firestore...");
       
-      // 2. User ki details Firestore Database mein save karo
+      // 2. User ki details Firestore Database mein save karo (users collection)
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: name,
@@ -56,6 +55,28 @@ export default function RegisterPage() {
       });
 
       console.log("✅ Step 3 Complete: User data saved to Firestore");
+
+      // ✅ AGAR PROFESSIONAL HAI, TOH professionals COLLECTION MEIN BHI SAVE KARO
+      if (role === "professional") {
+        console.log("🔵 Step 4: Saving professional data to professionals collection...");
+        
+        await setDoc(doc(db, "professionals", user.uid), {
+          uid: user.uid,
+          name: name,
+          email: email,
+          phone: phone,
+          category: service, // Carpenter, Plumber, etc.
+          skills: "Not specified yet", // Default skills
+          location: "Karnal", // Default location
+          status: "pending", // ✅ YE ZAROORI HAI!
+          isActive: false, // Pending hai toh active nahi hoga
+          registeredAt: serverTimestamp(),
+          approvedAt: null,
+          approvedBy: null
+        });
+
+        console.log("✅ Step 4 Complete: Professional data saved with status: pending");
+      }
 
       alert("✅ Registration Successful! Verification email sent to your inbox. Please check spam folder.");
       router.push("/login");
