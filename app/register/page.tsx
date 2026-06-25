@@ -11,7 +11,7 @@ import {
   GoogleAuthProvider,
   signInWithPopup
 } from "firebase/auth";
-import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { doc, setDoc, getDoc, serverTimestamp } from "firebase/firestore";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -24,34 +24,60 @@ export default function RegisterPage() {
   const [password, setPassword] = useState("");
   const [service, setService] = useState("Carpenter");
 
-  // 🔵 GOOGLE SIGN-UP FUNCTION (Sirf Customer ke liye)
+  // 🔵 GOOGLE SIGN-UP FUNCTION (Improved - Handles multiple accounts)
   const handleGoogleSignUp = async () => {
     setLoading(true);
     const provider = new GoogleAuthProvider();
+    
+    // ✅ Force account selection - user ko choose karne do
+    provider.setCustomParameters({
+      prompt: 'select_account'
+    });
 
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
-      // Firestore mein user data save karo
-      await setDoc(doc(db, "users", user.uid), {
-        uid: user.uid,
-        name: user.displayName || user.email?.split('@')[0] || "User",
-        email: user.email,
-        phone: "",
-        role: "customer", // Google se sign up = Customer by default
-        photoURL: user.photoURL || "",
-        emailVerified: true, // Google verified hai already
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp()
-      });
+      // Check if user already exists
+      const userDoc = await getDoc(doc(db, "users", user.uid));
+      
+      if (!userDoc.exists()) {
+        // New user - create document
+        await setDoc(doc(db, "users", user.uid), {
+          uid: user.uid,
+          name: user.displayName || user.email?.split('@')[0] || "User",
+          email: user.email,
+          phone: "",
+          role: "customer",
+          photoURL: user.photoURL || "",
+          emailVerified: true,
+          createdAt: serverTimestamp(),
+          lastLogin: serverTimestamp()
+        });
+        alert("✅ Welcome to Alcazo! Your account has been created.");
+      } else {
+        // Existing user - update last login
+        await setDoc(doc(db, "users", user.uid), {
+          lastLogin: serverTimestamp()
+        }, { merge: true });
+        alert("✅ Account already exists! Logging you in...");
+      }
 
-      alert("✅ Welcome to Alcazo! Your account has been created.");
       router.push("/dashboard");
 
     } catch (error: any) {
       console.error("Google Sign-Up Error:", error);
-      alert("❌ Google Sign-Up Failed: " + error.message);
+      
+      // Better error messages
+      if (error.code === 'auth/popup-blocked') {
+        alert("⚠️ Popup was blocked. Please allow popups for this site and try again.");
+      } else if (error.code === 'auth/unauthorized-domain') {
+        alert("⚠️ Domain not authorized. Please contact the administrator.");
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        // User closed popup - no error needed
+      } else {
+        alert("❌ Google Sign-Up Failed: " + error.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -64,14 +90,12 @@ export default function RegisterPage() {
     try {
       console.log("🔵 Step 1: Creating user...");
       
-      // 1. Firebase Auth mein User Create karo
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
       
       console.log("✅ Step 1 Complete: User created -", user.email);
       console.log("🔵 Step 2: Sending verification email...");
 
-      // 📧 EMAIL VERIFICATION
       try {
         await sendEmailVerification(user);
         console.log("✅ Step 2 Complete: Verification email sent to", user.email);
@@ -81,7 +105,6 @@ export default function RegisterPage() {
 
       console.log("🔵 Step 3: Saving to Firestore...");
       
-      // 2. User ki details Firestore Database mein save karo
       await setDoc(doc(db, "users", user.uid), {
         uid: user.uid,
         name: name,
@@ -94,7 +117,6 @@ export default function RegisterPage() {
 
       console.log("✅ Step 3 Complete: User data saved to Firestore");
 
-      // ✅ AGAR PROFESSIONAL HAI, TOH professionals COLLECTION MEIN BHI SAVE KARO
       if (role === "professional") {
         console.log("🔵 Step 4: Saving professional data to professionals collection...");
         
