@@ -412,12 +412,130 @@ function ManageProsTab() {
 }
 
 // PENDING TAB
+// PENDING APPROVALS TAB
 function PendingTab() {
+  const [pendingPros, setPendingPros] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPending = async () => {
+      setLoading(true);
+      try {
+        // Sirf pending professionals fetch karo
+        const q = query(collection(db, "professionals"), where("status", "==", "pending"));
+        const querySnapshot = await getDocs(q);
+        
+        const prosList: any[] = [];
+        querySnapshot.forEach((doc) => {
+          prosList.push({ id: doc.id, ...doc.data() });
+        });
+        setPendingPros(prosList);
+      } catch (error) {
+        console.error("Error fetching pending professionals:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPending();
+  }, []);
+
+  // Approve karne ka function
+  const handleApprove = async (id: string) => {
+    if (!window.confirm("Kya aap is professional ko approve karna chahte hain? Wo website par live ho jayega.")) return;
+    
+    try {
+      await updateDoc(doc(db, "professionals", id), { 
+        status: "approved",
+        isActive: true,
+        approvedAt: serverTimestamp()
+      });
+      alert("✅ Professional approved successfully!");
+      window.location.reload(); 
+    } catch (error) {
+      console.error("Error approving professional:", error);
+      alert("❌ Failed to approve.");
+    }
+  };
+
+  // Reject karne ka function
+  const handleReject = async (id: string) => {
+    if (!window.confirm("Kya aap is professional ki request reject karna chahte hain?")) return;
+    
+    try {
+      await updateDoc(doc(db, "professionals", id), { status: "rejected" });
+      alert("❌ Professional rejected.");
+      window.location.reload();
+    } catch (error) {
+      console.error("Error rejecting professional:", error);
+      alert("❌ Failed to reject.");
+    }
+  };
+
+  if (loading) return <p style={{textAlign: 'center', color: '#6b7280'}}>Loading pending requests...</p>;
+
   return (
-    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-      <Clock size={48} color="#d97706" style={{ marginBottom: '16px' }} />
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Pending Approvals</h2>
-      <p style={{ color: '#6b7280' }}>New registration requests will appear here.</p>
+    <div>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
+        Pending Approvals
+      </h2>
+      <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>
+        Total Pending Requests: {pendingPros.length}
+      </p>
+
+      {pendingPros.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', background: '#f9fafb', borderRadius: '12px' }}>
+          <p style={{ color: '#9ca3af' }}>Koi pending request nahi hai. Sab clear hai!</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          {pendingPros.map((pro) => (
+            <div key={pro.id} style={{
+              background: 'white', border: '2px solid #fef3c7', borderRadius: '16px',
+              padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#111827', margin: 0 }}>{pro.name}</h3>
+                  <p style={{ fontSize: '0.85rem', color: '#d97706', fontWeight: '600', margin: '4px 0 0' }}>{pro.category}</p>
+                </div>
+                <span style={{
+                  padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
+                  background: '#fef3c7', color: '#92400e'
+                }}>
+                  Pending
+                </span>
+              </div>
+              
+              <p style={{ fontSize: '0.9rem', color: '#4b5563', marginBottom: '8px' }}>📞 {pro.phone}</p>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '16px', lineHeight: '1.4' }}>🛠️ {pro.skills}</p>
+              <p style={{ fontSize: '0.8rem', color: '#9ca3af', marginBottom: '16px' }}>📍 {pro.location}</p>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => handleApprove(pro.id)}
+                  style={{
+                    flex: 1, padding: '10px', border: 'none', borderRadius: '8px',
+                    background: '#dcfce7', color: '#166534',
+                    fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem'
+                  }}
+                >
+                  ✅ Approve
+                </button>
+                <button
+                  onClick={() => handleReject(pro.id)}
+                  style={{
+                    flex: 1, padding: '10px', border: 'none', borderRadius: '8px',
+                    background: '#fee2e2', color: '#dc2626',
+                    fontWeight: '700', cursor: 'pointer', fontSize: '0.85rem'
+                  }}
+                >
+                  ❌ Reject
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
