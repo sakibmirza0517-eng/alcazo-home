@@ -214,7 +214,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ✅ Mobile Menu - FIXED: Position Absolute, Full Width */}
+        {/* ✅ Mobile Menu - WITH BACK TO HOME BUTTON */}
         {isOpen && isMobile && (
           <div style={{
             position: 'absolute',
@@ -229,6 +229,37 @@ export default function Navbar() {
             maxHeight: 'calc(100vh - 80px)',
             overflowY: 'auto'
           }}>
+            {/* ✅ Back to Home Button - PROMINENT */}
+            <Link 
+              href="/" 
+              onClick={() => setIsOpen(false)} 
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '10px',
+                padding: '14px 20px',
+                background: 'linear-gradient(135deg, #d97706, #b45309)',
+                color: 'white',
+                textDecoration: 'none',
+                fontWeight: '700',
+                fontSize: '1rem',
+                borderRadius: '12px',
+                marginBottom: '12px',
+                boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)'
+              }}
+            >
+              <Home size={20} />
+              <span>Back to Home</span>
+            </Link>
+
+            {/* Divider */}
+            <div style={{ 
+              height: '2px', 
+              background: 'linear-gradient(90deg, transparent, rgba(217, 119, 6, 0.3), transparent)', 
+              margin: '8px 0 16px' 
+            }} />
+
             {/* Common Links */}
             <Link 
               href="/" 
