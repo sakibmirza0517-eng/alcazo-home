@@ -1,5 +1,6 @@
 "use client";
 
+import { getDocs, query, where, collection, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -322,11 +323,127 @@ const inputStyle = {
 };
 
 function ManageProsTab() {
+  const [professionals, setProfessionals] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Data fetch karna jab tab open ho
+  useEffect(() => {
+    const fetchProfessionals = async () => {
+      setLoading(true);
+      try {
+        // Sirf approved professionals fetch karo
+        const q = query(collection(db, "professionals"), where("status", "==", "approved"));
+        const querySnapshot = await getDocs(q);
+        
+        const prosList: any[] = [];
+        querySnapshot.forEach((doc) => {
+          prosList.push({ id: doc.id, ...doc.data() });
+        });
+        setProfessionals(prosList);
+      } catch (error) {
+        console.error("Error fetching professionals:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProfessionals();
+  }, []);
+
+  // Professional ko Hide/Deactivate karna
+  const handleDeactivate = async (id: string, currentStatus: boolean) => {
+    if (!window.confirm("Kya aap is professional ko website se hide karna chahte hain?")) return;
+    
+    try {
+      await updateDoc(doc(db, "professionals", id), { isActive: !currentStatus });
+      alert("✅ Status updated successfully!");
+      // List refresh karne ke liye page reload (simple tareeka)
+      window.location.reload(); 
+    } catch (error) {
+      console.error("Error updating status:", error);
+      alert("❌ Failed to update status.");
+    }
+  };
+
+  // Professional ko Delete karna
+  const handleDelete = async (id: string) => {
+    if (!window.confirm("⚠️ WARNING: Kya aap is professional ko hamesha ke liye DELETE karna chahte hain? Ye action undo nahi hoga!")) return;
+    
+    try {
+      await deleteDoc(doc(db, "professionals", id));
+      alert("🗑️ Professional deleted successfully!");
+      window.location.reload();
+    } catch (error) {
+      console.error("Error deleting professional:", error);
+      alert("❌ Failed to delete.");
+    }
+  };
+
+  if (loading) return <p style={{textAlign: 'center', color: '#6b7280'}}>Loading professionals...</p>;
+
   return (
-    <div style={{ textAlign: 'center', padding: '40px 0' }}>
-      <Users size={48} color="#d97706" style={{ marginBottom: '16px' }} />
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827' }}>Manage Approved Professionals</h2>
-      <p style={{ color: '#6b7280' }}>List of professionals will appear here.</p>
+    <div>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginBottom: '8px' }}>
+        Manage Professionals
+      </h2>
+      <p style={{ color: '#6b7280', marginBottom: '24px', fontSize: '0.95rem' }}>
+        Total Approved: {professionals.length} | Yahan se aap workers ko hide ya delete kar sakte hain.
+      </p>
+
+      {professionals.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px', background: '#f9fafb', borderRadius: '12px' }}>
+          <p style={{ color: '#9ca3af' }}>Koi approved professional nahi mila.</p>
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
+          {professionals.map((pro) => (
+            <div key={pro.id} style={{
+              background: 'white', border: '1px solid #e5e7eb', borderRadius: '16px',
+              padding: '20px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
+                <div>
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#111827', margin: 0 }}>{pro.name}</h3>
+                  <p style={{ fontSize: '0.85rem', color: '#d97706', fontWeight: '600', margin: '4px 0 0' }}>{pro.category}</p>
+                </div>
+                <span style={{
+                  padding: '4px 10px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '700',
+                  background: pro.isActive ? '#dcfce7' : '#fee2e2',
+                  color: pro.isActive ? '#166534' : '#991b1b'
+                }}>
+                  {pro.isActive ? 'Active' : 'Hidden'}
+                </span>
+              </div>
+              
+              <p style={{ fontSize: '0.9rem', color: '#4b5563', marginBottom: '8px' }}>📞 {pro.phone}</p>
+              <p style={{ fontSize: '0.85rem', color: '#6b7280', marginBottom: '16px', lineHeight: '1.4' }}>🛠️ {pro.skills}</p>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button
+                  onClick={() => handleDeactivate(pro.id, pro.isActive)}
+                  style={{
+                    flex: 1, padding: '10px', border: 'none', borderRadius: '8px',
+                    background: pro.isActive ? '#fef3c7' : '#dcfce7',
+                    color: pro.isActive ? '#92400e' : '#166534',
+                    fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem'
+                  }}
+                >
+                  {pro.isActive ? 'Hide' : 'Activate'}
+                </button>
+                <button
+                  onClick={() => handleDelete(pro.id)}
+                  style={{
+                    flex: 1, padding: '10px', border: 'none', borderRadius: '8px',
+                    background: '#fee2e2', color: '#dc2626',
+                    fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem'
+                  }}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
