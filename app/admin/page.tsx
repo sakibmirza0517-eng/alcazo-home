@@ -62,33 +62,56 @@ export default function AdminDashboard() {
   return (
     <div style={{ minHeight: '100vh', background: '#f9fafb', paddingTop: '80px' }}>
       
-      <header style={{
-        position: 'fixed', top: 0, left: 0, right: 0, height: '80px',
-        background: 'white', borderBottom: '2px solid rgba(217, 119, 6, 0.2)',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '0 20px', zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '40px', height: '40px', background: 'linear-gradient(135deg, #d97706, #b45309)',
-            borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center'
-          }}>
-            <Shield size={20} color="white" />
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', margin: 0 }}>Admin Panel</h1>
-            <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: 0 }}>Alcazo Control Center</p>
-          </div>
-        </div>
-        
-        <button onClick={handleLogout} style={{
-          display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px',
-          background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px',
-          fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem'
-        }}>
-          <LogOut size={16} /> Logout
-        </button>
-      </header>
+     <header style={{
+  position: 'fixed', top: 0, left: 0, right: 0, height: '80px',
+  background: 'white', borderBottom: '2px solid rgba(217, 119, 6, 0.2)',
+  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+  padding: '0 20px', zIndex: 1000, boxShadow: '0 2px 10px rgba(0,0,0,0.05)'
+}}>
+  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <div style={{
+      width: '40px', height: '40px', background: 'linear-gradient(135deg, #d97706, #b45309)',
+      borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center'
+    }}>
+      <Shield size={20} color="white" />
+    </div>
+    <div>
+      <h1 style={{ fontSize: '1.2rem', fontWeight: '800', color: '#111827', margin: 0 }}>Admin Panel</h1>
+      <p style={{ fontSize: '0.7rem', color: '#6b7280', margin: 0 }}>Alcazo Control Center</p>
+    </div>
+  </div>
+  
+  {/* Right Side - Back to Home + Logout */}
+  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+    <Link 
+      href="/" 
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '8px 16px',
+        background: 'white',
+        color: '#d97706',
+        border: '2px solid #d97706',
+        borderRadius: '8px',
+        textDecoration: 'none',
+        fontWeight: '600',
+        fontSize: '0.9rem',
+        transition: 'all 0.3s ease'
+      }}
+    >
+      <ArrowLeft size={16} /> Back to Home
+    </Link>
+
+    <button onClick={handleLogout} style={{
+      display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px',
+      background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '8px',
+      fontWeight: '600', cursor: 'pointer', fontSize: '0.9rem'
+    }}>
+      <LogOut size={16} /> Logout
+    </button>
+  </div>
+</header>
 
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '20px' }}>
         
