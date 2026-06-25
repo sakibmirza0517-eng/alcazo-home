@@ -1,0 +1,80 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { auth, db } from "@/lib/firebase";
+import { isSignInWithEmailLink, signInWithEmailLink } from "firebase/auth";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+
+export default function AuthCallback() {
+  const router = useRouter();
+  const [status, setStatus] = useState("Verifying your login...");
+
+  useEffect(() => {
+    const handleCallback = async () => {
+      try {
+        // Check karo ki URL mein login link hai ya nahi
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+          
+          // LocalStorage se email nikalo
+          let email = window.localStorage.getItem("emailForSignIn");
+          
+          // Agar email nahi mila (user ne dusre browser mein link khola), toh prompt karo
+          if (!email) {
+            email = window.prompt("Please provide your email for confirmation");
+          }
+
+          if (email) {
+            // User ko sign in karo
+            const result = await signInWithEmailLink(auth, email, window.location.href);
+            const user = result.user;
+            
+            // Check karo ki user ka data Firestore mein hai ya nahi
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            
+            if (!userDoc.exists()) {
+              // Agar naya user hai, toh basic entry bana do
+              await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                email: user.email,
+                name: user.email.split('@')[0], // Default name
+                phone: "",
+                role: "customer",
+                createdAt: new Date().toISOString()
+              });
+              setStatus("Account created! Redirecting...");
+            } else {
+              setStatus("Login successful! Redirecting...");
+            }
+
+            // Clear localStorage
+            window.localStorage.removeItem("emailForSignIn");
+
+            // 2 second baad dashboard bhej do
+            setTimeout(() => {
+              router.push("/dashboard");
+            }, 2000);
+          }
+        } else {
+          setStatus("Invalid link. Please try logging in again.");
+          setTimeout(() => router.push("/login"), 3000);
+        }
+      } catch (error) {
+        console.error("Auth error:", error);
+        setStatus("Something went wrong. Please try again.");
+      }
+    };
+
+    handleCallback();
+  }, [router]);
+
+  return (
+    <div style={{
+      minHeight: "100vh", background: "#fffbeb", display: "flex",
+      alignItems: "center", justifyContent: "center", flexDirection: "column", gap: "20px"
+    }}>
+      <h1 style={{ fontSize: "1.5rem", fontWeight: "800", color: "#111827" }}>{status}</h1>
+      <p style={{ color: "#6b7280" }}>Please wait while we secure your session...</p>
+    </div>
+  );
+}
