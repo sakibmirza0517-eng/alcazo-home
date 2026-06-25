@@ -5,7 +5,10 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import { doc, getDoc, collection, addDoc, serverTimestamp, getDocs, query, where, updateDoc, deleteDoc } from "firebase/firestore";
+import { 
+  doc, getDoc, collection, addDoc, serverTimestamp, 
+  getDocs, query, where, updateDoc, deleteDoc 
+} from "firebase/firestore";
 import { 
   LayoutDashboard, UserPlus, Users, Clock, UserCheck, 
   LogOut, Hammer, Shield, AlertCircle, Briefcase 
@@ -289,7 +292,7 @@ function AddProfessionalTab() {
   );
 }
 
-// MANAGE PROFESSIONALS TAB - FIXED VERSION
+// MANAGE PROFESSIONALS TAB
 function ManageProsTab() {
   const [professionals, setProfessionals] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -411,7 +414,6 @@ function ManageProsTab() {
   );
 }
 
-// PENDING TAB
 // PENDING APPROVALS TAB
 function PendingTab() {
   const [pendingPros, setPendingPros] = useState<any[]>([]);
@@ -421,7 +423,6 @@ function PendingTab() {
     const fetchPending = async () => {
       setLoading(true);
       try {
-        // Sirf pending professionals fetch karo
         const q = query(collection(db, "professionals"), where("status", "==", "pending"));
         const querySnapshot = await getDocs(q);
         
@@ -439,7 +440,6 @@ function PendingTab() {
     fetchPending();
   }, []);
 
-  // Approve karne ka function
   const handleApprove = async (id: string) => {
     if (!window.confirm("Kya aap is professional ko approve karna chahte hain? Wo website par live ho jayega.")) return;
     
@@ -457,7 +457,6 @@ function PendingTab() {
     }
   };
 
-  // Reject karne ka function
   const handleReject = async (id: string) => {
     if (!window.confirm("Kya aap is professional ki request reject karna chahte hain?")) return;
     
@@ -541,7 +540,6 @@ function PendingTab() {
 }
 
 // USERS TAB
-// USERS TAB - Registered Customers
 function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -550,7 +548,6 @@ function UsersTab() {
     const fetchUsers = async () => {
       setLoading(true);
       try {
-        // Saare users fetch karo (customers + professionals)
         const q = query(collection(db, "users"));
         const querySnapshot = await getDocs(q);
         
@@ -568,7 +565,6 @@ function UsersTab() {
     fetchUsers();
   }, []);
 
-  // User ko block/unblock karne ka function
   const handleToggleBlock = async (userId: string, currentBlocked: boolean) => {
     const action = currentBlocked ? "unblock" : "block";
     if (!window.confirm(`Kya aap is user ko ${action} karna chahte hain?`)) return;
@@ -587,7 +583,6 @@ function UsersTab() {
 
   if (loading) return <p style={{textAlign: 'center', color: '#6b7280'}}>Loading users...</p>;
 
-  // Customers aur Professionals ko alag karo
   const customers = users.filter(u => u.role === "customer");
   const professionals = users.filter(u => u.role === "professional");
 
@@ -600,7 +595,6 @@ function UsersTab() {
         Total Users: {users.length} | Customers: {customers.length} | Professionals: {professionals.length}
       </p>
 
-      {/* Customers Section */}
       <div style={{ marginBottom: '40px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#d97706', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserCheck size={20} />
@@ -660,7 +654,6 @@ function UsersTab() {
         )}
       </div>
 
-      {/* Professionals Section */}
       <div>
         <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#d97706', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Briefcase size={20} />
