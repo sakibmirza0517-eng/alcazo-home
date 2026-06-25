@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, Sun, Moon, Hammer, Home, Briefcase, Users, Calendar, User, LogOut } from "lucide-react";
+import { Menu, X, Hammer, Home, Briefcase, Users, Calendar, User, LogOut, Shield } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -12,7 +12,6 @@ export default function Navbar() {
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  const [isDark, setIsDark] = useState(false);
   const [user, setUser] = useState<any>(null);
   const [userData, setUserData] = useState<any>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -23,7 +22,6 @@ export default function Navbar() {
     };
     window.addEventListener("scroll", handleScroll);
 
-    // Mobile detection
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
     };
@@ -61,9 +59,12 @@ export default function Navbar() {
     router.push("/");
   };
 
+  // ✅ Admin check
+  const isAdmin = user?.email === "sakibfatih107@gmail.com";
+
   const navLinks = [
     { href: "/", label: "Home", icon: Home },
-    { href: "/book-service", label: "Services", icon: Briefcase },
+    { href: "/services", label: "Services", icon: Briefcase },
     { href: "/professionals", label: "Professionals", icon: Users },
     { href: "/book-service", label: "Book Service", icon: Calendar },
   ];
@@ -131,7 +132,7 @@ export default function Navbar() {
             </div>
           </Link>
 
-          {/* Desktop Navigation - Sirf desktop pe dikhao */}
+          {/* Desktop Navigation */}
           {!isMobile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
               {navLinks.map((link, i) => (
@@ -171,11 +172,38 @@ export default function Navbar() {
 
           {/* Right Side Actions */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            {/* Desktop Auth Buttons - Sirf desktop pe dikhao */}
+            {/* Desktop Auth Buttons */}
             {!isMobile && (
               <>
                 {user ? (
                   <>
+                    {isAdmin && (
+                      <Link
+                        href="/admin"
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 20px',
+                          background: '#111827',
+                          color: 'white',
+                          textDecoration: 'none',
+                          fontWeight: '700',
+                          fontSize: '0.95rem',
+                          borderRadius: '10px',
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = '#374151';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = '#111827';
+                        }}
+                      >
+                        <Shield size={18} />
+                        <span>Admin</span>
+                      </Link>
+                    )}
                     <Link
                       href={userData?.role === "professional" ? "/professional-dashboard" : "/dashboard"}
                       style={{
@@ -289,7 +317,7 @@ export default function Navbar() {
               </>
             )}
 
-            {/* Mobile Menu Button - Hamesha dikhao */}
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsOpen(!isOpen)}
               style={{
@@ -309,7 +337,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* Mobile Menu - Jab isOpen true ho */}
+        {/* ✅ Mobile Menu - Conditional Rendering */}
         {isOpen && (
           <div style={{
             display: 'flex',
@@ -319,98 +347,213 @@ export default function Navbar() {
             borderTop: '2px solid rgba(217, 119, 6, 0.2)',
             marginTop: '10px'
           }}>
-            {navLinks.map((link, i) => (
-              <Link
-                key={i}
-                href={link.href}
-                onClick={() => setIsOpen(false)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '12px',
-                  padding: '14px 20px',
-                  color: '#374151',
-                  textDecoration: 'none',
-                  fontWeight: '600',
-                  fontSize: '1rem',
-                  borderRadius: '10px',
-                  background: 'transparent',
-                  transition: 'all 0.3s ease'
-                }}
-              >
-                <link.icon size={20} />
-                <span>{link.label}</span>
-              </Link>
-            ))}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px' }}>
-              {user ? (
-                <>
+            {/* Common Links (Both logged in/out) */}
+            <Link
+              href="/"
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 20px',
+                color: '#374151',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '1rem',
+                borderRadius: '10px',
+                background: 'transparent',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Home size={20} />
+              <span>Home</span>
+            </Link>
+
+            <Link
+              href="/services"
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 20px',
+                color: '#374151',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '1rem',
+                borderRadius: '10px',
+                background: 'transparent',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Briefcase size={20} />
+              <span>Services</span>
+            </Link>
+
+            <Link
+              href="/book-service"
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 20px',
+                color: '#374151',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '1rem',
+                borderRadius: '10px',
+                background: 'transparent',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Calendar size={20} />
+              <span>Book a Service</span>
+            </Link>
+
+            <Link
+              href="/register"
+              onClick={() => setIsOpen(false)}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                padding: '14px 20px',
+                color: '#374151',
+                textDecoration: 'none',
+                fontWeight: '600',
+                fontSize: '1rem',
+                borderRadius: '10px',
+                background: 'transparent',
+                transition: 'all 0.3s ease'
+              }}
+            >
+              <Briefcase size={20} />
+              <span>Become a Professional</span>
+            </Link>
+
+            {/* Separator */}
+            <div style={{ 
+              height: '1px', 
+              background: 'rgba(217, 119, 6, 0.2)', 
+              margin: '10px 0' 
+            }} />
+
+            {/* ✅ Conditional Auth Buttons */}
+            {user ? (
+              <>
+                {/* Logged IN User */}
+                {isAdmin && (
                   <Link
-                    href={userData?.role === "professional" ? "/professional-dashboard" : "/dashboard"}
+                    href="/admin"
                     onClick={() => setIsOpen(false)}
                     style={{
-                      padding: '12px 12px',
-                      color: '#d97706',
-                      textDecoration: 'none',
-                      fontWeight: '700',
-                      border: '2px solid #d97706',
-                      borderRadius: '10px',
-                      textAlign: 'center'
-                    }}
-                  >
-                    Dashboard
-                  </Link>
-                  <button
-                    onClick={() => { handleLogout(); setIsOpen(false); }}
-                    style={{
-                      padding: '12px 12px',
-                      background: '#fee2e2',
-                      color: '#dc2626',
-                      border: 'none',
-                      fontWeight: '700',
-                      borderRadius: '10px',
-                      textAlign: 'center',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    Logout
-                  </button>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    onClick={() => setIsOpen(false)}
-                    style={{
-                      padding: '12px 12px',
-                      color: '#d97706',
-                      textDecoration: 'none',
-                      fontWeight: '700',
-                      border: '2px solid #d97706',
-                      borderRadius: '10px',
-                      textAlign: 'center'
-                    }}
-                  >
-                    Login
-                  </Link>
-                  <Link
-                    href="/register"
-                    onClick={() => setIsOpen(false)}
-                    style={{
-                      padding: '12px 12px',
-                      background: 'linear-gradient(135deg, #d97706, #b45309)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '12px',
+                      padding: '14px 20px',
+                      background: '#111827',
                       color: 'white',
                       textDecoration: 'none',
                       fontWeight: '700',
+                      fontSize: '1rem',
                       borderRadius: '10px',
-                      textAlign: 'center'
+                      transition: 'all 0.3s ease'
                     }}
                   >
-                    Register
+                    <Shield size={20} />
+                    <span>Admin Panel</span>
                   </Link>
-                </>
-              )}
-            </div>
+                )}
+
+                <Link
+                  href={userData?.role === "professional" ? "/professional-dashboard" : "/dashboard"}
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 20px',
+                    color: '#d97706',
+                    textDecoration: 'none',
+                    fontWeight: '700',
+                    fontSize: '1rem',
+                    border: '2px solid #d97706',
+                    borderRadius: '10px',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <User size={20} />
+                  <span>Dashboard</span>
+                </Link>
+
+                <button
+                  onClick={() => { handleLogout(); setIsOpen(false); }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 20px',
+                    background: '#fee2e2',
+                    color: '#dc2626',
+                    border: 'none',
+                    fontWeight: '700',
+                    fontSize: '1rem',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <LogOut size={20} />
+                  <span>Logout</span>
+                </button>
+              </>
+            ) : (
+              <>
+                {/* Logged OUT User */}
+                <Link
+                  href="/login"
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 20px',
+                    color: '#d97706',
+                    textDecoration: 'none',
+                    fontWeight: '700',
+                    fontSize: '1rem',
+                    border: '2px solid #d97706',
+                    borderRadius: '10px',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <User size={20} />
+                  <span>Login</span>
+                </Link>
+
+                <Link
+                  href="/register"
+                  onClick={() => setIsOpen(false)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px',
+                    padding: '14px 20px',
+                    background: 'linear-gradient(135deg, #d97706, #b45309)',
+                    color: 'white',
+                    textDecoration: 'none',
+                    fontWeight: '700',
+                    fontSize: '1rem',
+                    borderRadius: '10px',
+                    transition: 'all 0.3s ease'
+                  }}
+                >
+                  <User size={20} />
+                  <span>Register</span>
+                </Link>
+              </>
+            )}
           </div>
         )}
 
