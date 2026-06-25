@@ -5,7 +5,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Hammer, Mail, Lock, ArrowLeft } from "lucide-react";
 import { auth, db } from "@/lib/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { 
+  signInWithEmailAndPassword, 
+  signOut,
+  sendEmailVerification 
+} from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
 
 export default function LoginPage() {
@@ -13,16 +17,36 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
-  const handleLogin = async (e) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setShowResend(false);
 
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
 
-      // User ki details Firestore se fetch karo
+      // ✅ EMAIL VERIFICATION CHECK
+      if (!user.emailVerified) {
+        // User ko logout karo
+        await signOut(auth);
+        
+        // Error message dikhao
+        alert("⚠️ Please verify your email first! Check your inbox for the verification link.");
+        
+        // Resend button dikhao
+        setShowResend(true);
+        setCurrentUser(user);
+        
+        setLoading(false);
+        return;
+      }
+
+      // Agar email verified hai, toh aage badho
       const userDoc = await getDoc(doc(db, "users", user.uid));
       
       if (userDoc.exists()) {
@@ -39,11 +63,28 @@ export default function LoginPage() {
           router.push("/dashboard");
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       alert("❌ Login Failed: " + error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // 📧 Resend verification email function
+  const handleResendVerification = async () => {
+    if (!currentUser) return;
+    
+    setResendLoading(true);
+    
+    try {
+      await sendEmailVerification(currentUser);
+      alert("✅ Verification email resent! Please check your inbox (and spam folder).");
+    } catch (error: any) {
+      console.error(error);
+      alert("❌ Failed to resend: " + error.message);
+    } finally {
+      setResendLoading(false);
     }
   };
 
@@ -150,7 +191,31 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* ✅ SPAM FOLDER MESSAGE ADDED */}
+        {/* ✅ Resend Verification Button (Sirf tab dikhega jab email verify nahi hua) */}
+        {showResend && (
+          <div style={{ marginTop: "16px" }}>
+            <button
+              onClick={handleResendVerification}
+              disabled={resendLoading}
+              style={{
+                background: "transparent",
+                color: "#d97706",
+                padding: "10px 20px",
+                borderRadius: "10px",
+                border: "2px solid #d97706",
+                fontWeight: "600",
+                fontSize: "0.9rem",
+                cursor: "pointer",
+                width: "100%",
+                opacity: resendLoading ? 0.7 : 1
+              }}
+            >
+              {resendLoading ? "Sending..." : "📧 Resend Verification Email"}
+            </button>
+          </div>
+        )}
+
+        {/* ✅ Spam Folder Warning Message */}
         <p style={{ 
           marginTop: "16px", 
           color: "#d97706", 
@@ -161,7 +226,7 @@ export default function LoginPage() {
           borderRadius: "8px",
           border: "1px solid #fcd34d"
         }}>
-          ⚠️ Didn't receive verification email? Please check your Spam folder.
+          ⚠️ Didn't receive email? Please check your Spam folder.
         </p>
 
         <p style={{ marginTop: "16px", color: "#6b7280", fontSize: "0.9rem" }}>
