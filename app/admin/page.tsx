@@ -448,6 +448,19 @@ function ManageProsTab() {
   );
 }
 
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  border: '2px solid #e5e7eb',
+  borderRadius: '10px',
+  fontSize: '1rem',
+  outline: 'none',
+  boxSizing: 'border-box',
+  marginBottom: '16px',
+  background: '#fafafa',
+  transition: 'border 0.3s ease'
+};
+
 function PendingTab() {
   return (
     <div style={{ textAlign: 'center', padding: '40px 0' }}>
