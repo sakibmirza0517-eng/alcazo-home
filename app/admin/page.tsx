@@ -134,17 +134,176 @@ export default function AdminDashboard() {
 }
 
 // DASHBOARD TAB
+// DASHBOARD TAB - WITH REAL DATA
 function DashboardTab() {
+  const [stats, setStats] = useState({
+    totalProfessionals: 0,
+    pendingApprovals: 0,
+    totalUsers: 0,
+    totalBookings: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      setLoading(true);
+      try {
+        // Total Professionals (Approved)
+        const prosQuery = query(collection(db, "professionals"), where("status", "==", "approved"));
+        const prosSnapshot = await getDocs(prosQuery);
+        
+        // Pending Approvals
+        const pendingQuery = query(collection(db, "professionals"), where("status", "==", "pending"));
+        const pendingSnapshot = await getDocs(pendingQuery);
+        
+        // Total Users
+        const usersQuery = query(collection(db, "users"));
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        // Total Bookings (if collection exists)
+        let bookingsCount = 0;
+        try {
+          const bookingsQuery = query(collection(db, "bookings"));
+          const bookingsSnapshot = await getDocs(bookingsQuery);
+          bookingsCount = bookingsSnapshot.size;
+        } catch (error) {
+          console.log("Bookings collection not found or empty");
+        }
+
+        setStats({
+          totalProfessionals: prosSnapshot.size,
+          pendingApprovals: pendingSnapshot.size,
+          totalUsers: usersSnapshot.size,
+          totalBookings: bookingsCount
+        });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStats();
+  }, []);
+
+  if (loading) {
+    return <p style={{textAlign: 'center', color: '#6b7280'}}>Loading dashboard...</p>;
+  }
+
+  const statCards = [
+    { 
+      title: 'Total Professionals', 
+      value: stats.totalProfessionals, 
+      color: '#d97706',
+      bg: '#fffbeb',
+      border: '#fcd34d'
+    },
+    { 
+      title: 'Pending Approvals', 
+      value: stats.pendingApprovals, 
+      color: '#dc2626',
+      bg: '#fee2e2',
+      border: '#fca5a5'
+    },
+    { 
+      title: 'Total Users', 
+      value: stats.totalUsers, 
+      color: '#2563eb',
+      bg: '#dbeafe',
+      border: '#93c5fd'
+    },
+    { 
+      title: 'Total Bookings', 
+      value: stats.totalBookings, 
+      color: '#16a34a',
+      bg: '#dcfce7',
+      border: '#86efac'
+    }
+  ];
+
   return (
     <div>
-      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>Dashboard Overview</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-        {['Total Professionals', 'Pending Approvals', 'Total Users', 'Total Bookings'].map((stat, i) => (
-          <div key={i} style={{ padding: '20px', background: '#fffbeb', borderRadius: '12px', border: '1px solid #fcd34d' }}>
-            <p style={{ color: '#92400e', fontSize: '0.9rem', fontWeight: '600', margin: 0 }}>{stat}</p>
-            <h3 style={{ fontSize: '2rem', fontWeight: '800', color: '#d97706', margin: '10px 0 0' }}>0</h3>
+      <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#111827', marginBottom: '20px' }}>
+        Dashboard Overview
+      </h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '20px' }}>
+        {statCards.map((stat, i) => (
+          <div 
+            key={i} 
+            style={{ 
+              padding: '24px', 
+              background: stat.bg, 
+              borderRadius: '16px', 
+              border: `2px solid ${stat.border}`,
+              transition: 'transform 0.3s ease',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+            }}
+          >
+            <p style={{ 
+              color: stat.color, 
+              fontSize: '0.9rem', 
+              fontWeight: '700', 
+              margin: '0 0 12px 0',
+              textTransform: 'uppercase',
+              letterSpacing: '0.5px'
+            }}>
+              {stat.title}
+            </p>
+            <h3 style={{ 
+              fontSize: '3rem', 
+              fontWeight: '800', 
+              color: stat.color, 
+              margin: 0,
+              lineHeight: 1
+            }}>
+              {stat.value}
+            </h3>
           </div>
         ))}
+      </div>
+
+      {/* Quick Actions */}
+      <div style={{ marginTop: '32px', padding: '24px', background: '#f9fafb', borderRadius: '16px' }}>
+        <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#111827', marginBottom: '16px' }}>
+          Quick Actions
+        </h3>
+        <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => document.querySelector('[data-tab="add"]')?.click()}
+            style={{
+              padding: '12px 24px',
+              background: 'linear-gradient(135deg, #d97706, #b45309)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '10px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              fontSize: '0.95rem'
+            }}
+          >
+            + Add Professional
+          </button>
+          <button 
+            onClick={() => document.querySelector('[data-tab="pending"]')?.click()}
+            style={{
+              padding: '12px 24px',
+              background: 'white',
+              color: '#d97706',
+              border: '2px solid #d97706',
+              borderRadius: '10px',
+              fontWeight: '700',
+              cursor: 'pointer',
+              fontSize: '0.95rem'
+            }}
+          >
+            View Pending ({stats.pendingApprovals})
+          </button>
+        </div>
       </div>
     </div>
   );
