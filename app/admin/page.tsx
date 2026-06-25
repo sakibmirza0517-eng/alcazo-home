@@ -540,6 +540,7 @@ function PendingTab() {
 }
 
 // USERS TAB
+// USERS TAB - Registered Customers
 function UsersTab() {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -595,6 +596,7 @@ function UsersTab() {
         Total Users: {users.length} | Customers: {customers.length} | Professionals: {professionals.length}
       </p>
 
+      {/* Customers Section */}
       <div style={{ marginBottom: '40px' }}>
         <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#d97706', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <UserCheck size={20} />
@@ -654,6 +656,7 @@ function UsersTab() {
         )}
       </div>
 
+      {/* Professionals Section - WITH BLOCK BUTTON */}
       <div>
         <h3 style={{ fontSize: '1.2rem', fontWeight: '700', color: '#d97706', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
           <Briefcase size={20} />
@@ -676,12 +679,14 @@ function UsersTab() {
                     <h4 style={{ fontSize: '1.1rem', fontWeight: '700', color: '#111827', margin: 0 }}>{user.name}</h4>
                     <p style={{ fontSize: '0.85rem', color: '#6b7280', margin: '4px 0 0' }}>{user.email}</p>
                   </div>
-                  <span style={{
-                    padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '700',
-                    background: '#fef3c7', color: '#92400e'
-                  }}>
-                    Pro
-                  </span>
+                  {user.isBlocked && (
+                    <span style={{
+                      padding: '4px 8px', borderRadius: '12px', fontSize: '0.7rem', fontWeight: '700',
+                      background: '#fee2e2', color: '#dc2626'
+                    }}>
+                      Blocked
+                    </span>
+                  )}
                 </div>
                 
                 <p style={{ fontSize: '0.9rem', color: '#4b5563', marginBottom: '8px' }}>📞 {user.phone}</p>
@@ -691,6 +696,23 @@ function UsersTab() {
                 <p style={{ fontSize: '0.75rem', color: '#9ca3af', marginBottom: '12px' }}>
                   Joined: {user.createdAt ? new Date(user.createdAt).toLocaleDateString() : 'N/A'}
                 </p>
+
+                <button
+                  onClick={() => handleToggleBlock(user.id, user.isBlocked || false)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    border: 'none',
+                    borderRadius: '8px',
+                    background: user.isBlocked ? '#dcfce7' : '#fee2e2',
+                    color: user.isBlocked ? '#166534' : '#dc2626',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    fontSize: '0.85rem'
+                  }}
+                >
+                  {user.isBlocked ? 'Unblock Professional' : 'Block Professional'}
+                </button>
               </div>
             ))}
           </div>
@@ -699,7 +721,6 @@ function UsersTab() {
     </div>
   );
 }
-
 // INPUT STYLE
 const inputStyle = {
   width: '100%',
