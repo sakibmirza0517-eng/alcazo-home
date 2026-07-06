@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, arrayUnion } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, MessageCircle, Check, TrendingUp, AlertCircle, CheckCircle2, XCircle } from "lucide-react";
+import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, MessageCircle, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import { createOrGetChat } from "@/lib/chat";
 
 export default function CustomerDashboard() {
   const router = useRouter();
@@ -52,7 +53,6 @@ export default function CustomerDashboard() {
     router.push("/");
   };
 
-  // Mark as Read Function - Firebase mein save karega
   const handleMarkAsRead = async (bookingId: string) => {
     try {
       const user = auth.currentUser;
@@ -67,16 +67,28 @@ export default function CustomerDashboard() {
     }
   };
 
-  // Filter bookings by status
+  // Chat open karna
+  const handleOpenChat = async (booking: any) => {
+    try {
+      const chatId = await createOrGetChat(
+        booking.id,
+        booking.customerId,
+        booking.professionalId
+      );
+      router.push(`/chat/${booking.id}`);
+    } catch (error) {
+      console.error("Error opening chat:", error);
+      alert("Failed to open chat");
+    }
+  };
+
   const pendingBookings = bookings.filter(b => b.status === "pending");
   const acceptedBookings = bookings.filter(b => b.status === "accepted");
   const completedBookings = bookings.filter(b => b.status === "completed");
   const cancelledBookings = bookings.filter(b => b.status === "cancelled");
   
-  // Unread accepted bookings
   const unreadAcceptedBookings = acceptedBookings.filter(b => !b.readByCustomer);
 
-  // Filter based on active tab
   const filteredBookings = () => {
     switch (activeTab) {
       case "pending": return pendingBookings;
@@ -288,6 +300,26 @@ export default function CustomerDashboard() {
                 </div>
                 
                 <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                  <button
+                    onClick={() => handleOpenChat(booking)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "8px",
+                      background: "#d97706",
+                      color: "white",
+                      padding: "10px 16px",
+                      borderRadius: "8px",
+                      border: "none",
+                      fontWeight: "600",
+                      fontSize: "0.9rem",
+                      cursor: "pointer"
+                    }}
+                  >
+                    <MessageSquare size={18} />
+                    Chat
+                  </button>
+
                   {booking.professionalPhone && (
                     <a 
                       href={`https://wa.me/91${booking.professionalPhone}?text=${encodeURIComponent(`Namaste ${booking.professionalName}, main Alcazo se booking kar raha hu.`)}`}
@@ -474,30 +506,10 @@ export default function CustomerDashboard() {
                   </div>
 
                   {/* Action buttons for accepted bookings */}
-                  {booking.status === "accepted" && booking.professionalPhone && (
+                  {booking.status === "accepted" && (
                     <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                      <a 
-                        href={`https://wa.me/91${booking.professionalPhone}?text=${encodeURIComponent(`Namaste ${booking.professionalName}, main Alcazo se booking kar raha hu.`)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          display: "inline-flex",
-                          alignItems: "center",
-                          gap: "8px",
-                          background: "#25D366",
-                          color: "white",
-                          padding: "8px 14px",
-                          borderRadius: "8px",
-                          textDecoration: "none",
-                          fontWeight: "600",
-                          fontSize: "0.85rem"
-                        }}
-                      >
-                        <MessageCircle size={16} />
-                        WhatsApp
-                      </a>
-                      <a 
-                        href={`tel:${booking.professionalPhone}`}
+                      <button
+                        onClick={() => handleOpenChat(booking)}
                         style={{
                           display: "inline-flex",
                           alignItems: "center",
@@ -506,14 +518,58 @@ export default function CustomerDashboard() {
                           color: "white",
                           padding: "8px 14px",
                           borderRadius: "8px",
-                          textDecoration: "none",
+                          border: "none",
                           fontWeight: "600",
-                          fontSize: "0.85rem"
+                          fontSize: "0.85rem",
+                          cursor: "pointer"
                         }}
                       >
-                        <Phone size={16} />
-                        Call
-                      </a>
+                        <MessageSquare size={16} />
+                        Chat
+                      </button>
+
+                      {booking.professionalPhone && (
+                        <>
+                          <a 
+                            href={`https://wa.me/91${booking.professionalPhone}?text=${encodeURIComponent(`Namaste ${booking.professionalName}, main Alcazo se booking kar raha hu.`)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              background: "#25D366",
+                              color: "white",
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              textDecoration: "none",
+                              fontWeight: "600",
+                              fontSize: "0.85rem"
+                            }}
+                          >
+                            <MessageCircle size={16} />
+                            WhatsApp
+                          </a>
+                          <a 
+                            href={`tel:${booking.professionalPhone}`}
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              background: "#16a34a",
+                              color: "white",
+                              padding: "8px 14px",
+                              borderRadius: "8px",
+                              textDecoration: "none",
+                              fontWeight: "600",
+                              fontSize: "0.85rem"
+                            }}
+                          >
+                            <Phone size={16} />
+                            Call
+                          </a>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>

@@ -6,7 +6,8 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, MessageCircle, CheckCircle, XCircle, TrendingUp, AlertCircle, Check, DollarSign } from "lucide-react";
+import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, MessageCircle, CheckCircle, XCircle, TrendingUp, AlertCircle, Check, DollarSign, MessageSquare } from "lucide-react";
+import { createOrGetChat } from "@/lib/chat";
 
 export default function ProfessionalDashboard() {
   const router = useRouter();
@@ -27,22 +28,18 @@ export default function ProfessionalDashboard() {
       }
 
       try {
-        // 1. User ki details fetch karo
         const userDoc = await getDoc(doc(db, "users", user.uid));
         if (userDoc.exists()) {
           const data = userDoc.data();
           setUserData(data);
 
-          // 2. Professional data fetch karo
           const proDoc = await getDoc(doc(db, "professionals", user.uid));
           if (proDoc.exists()) {
             setProfessionalData(proDoc.data());
           }
 
-          // 3. Real-time subscriptions setup karo
           const serviceType = data.service;
 
-          // Available Jobs (Pending) - Real-time
           const availableQuery = query(
             collection(db, "bookings"),
             where("serviceType", "==", serviceType),
@@ -53,7 +50,6 @@ export default function ProfessionalDashboard() {
             setAvailableJobs(jobsList);
           });
 
-          // Accepted Jobs - Real-time
           const acceptedQuery = query(
             collection(db, "bookings"),
             where("professionalId", "==", user.uid),
@@ -64,7 +60,6 @@ export default function ProfessionalDashboard() {
             setAcceptedJobs(jobsList);
           });
 
-          // Completed Jobs - Real-time
           const completedQuery = query(
             collection(db, "bookings"),
             where("professionalId", "==", user.uid),
@@ -76,7 +71,6 @@ export default function ProfessionalDashboard() {
             setLoading(false);
           });
 
-          // Cleanup function
           return () => {
             unsubscribeAvailable();
             unsubscribeAccepted();
@@ -97,7 +91,6 @@ export default function ProfessionalDashboard() {
     router.push("/");
   };
 
-  // Job Accept karne ka function
   const handleAcceptJob = async (bookingId: string) => {
     if (!window.confirm("Kya aap ye job accept karna chahte hain?")) return;
 
@@ -116,7 +109,6 @@ export default function ProfessionalDashboard() {
     }
   };
 
-  // Job Reject karne ka function
   const handleRejectJob = async (bookingId: string) => {
     if (!window.confirm("Kya aap ye job reject karna chahte hain?")) return;
 
@@ -133,7 +125,6 @@ export default function ProfessionalDashboard() {
     }
   };
 
-  // Job Complete mark karne ka function
   const handleCompleteJob = async (bookingId: string) => {
     if (!window.confirm("Kya ye job complete ho gayi hai?")) return;
 
@@ -149,11 +140,25 @@ export default function ProfessionalDashboard() {
     }
   };
 
-  // Customer se WhatsApp pe contact karne ka function
   const handleContactCustomer = (phone: string, name: string) => {
     const message = `Namaste ${name}, main Alcazo se hu. Aapki booking mili hai.`;
     const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
     window.open(url, '_blank');
+  };
+
+  // Chat open karna
+  const handleOpenChat = async (booking: any) => {
+    try {
+      await createOrGetChat(
+        booking.id,
+        booking.customerId,
+        booking.professionalId || auth.currentUser!.uid
+      );
+      router.push(`/chat/${booking.id}`);
+    } catch (error) {
+      console.error("Error opening chat:", error);
+      alert("Failed to open chat");
+    }
   };
 
   if (loading) {
@@ -447,7 +452,6 @@ export default function ProfessionalDashboard() {
                       </span>
                     </div>
 
-                    {/* Action Buttons */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                       <button 
                         onClick={() => handleAcceptJob(booking.id)}
@@ -541,6 +545,16 @@ export default function ProfessionalDashboard() {
 
                     {/* Action Buttons */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
+                      <button 
+                        onClick={() => handleOpenChat(booking)}
+                        style={{
+                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                          background: "#d97706", color: "white", border: "none",
+                          padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem"
+                        }}
+                      >
+                        <MessageSquare size={16} /> Chat
+                      </button>
                       <button 
                         onClick={() => handleCompleteJob(booking.id)}
                         style={{

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Hammer, Mail, Lock, ArrowLeft } from "lucide-react";
@@ -9,6 +9,8 @@ import {
   signInWithEmailAndPassword, 
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut
 } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
@@ -18,6 +20,54 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+
+  // 🔵 REDIRECT RESULT CHECK - Google Sign-In ke baad automatic redirect handle karega
+  useEffect(() => {
+    const handleRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        
+        if (result) {
+          const user = result.user;
+          
+          // User exists check karo
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          if (!userDoc.exists()) {
+            await signOut(auth);
+            alert("❌ Account not found! Please register first.");
+            router.push("/register");
+            return;
+          }
+
+          const userData = userDoc.data();
+          const role = userData.role;
+
+          // Update last login
+          await setDoc(doc(db, "users", user.uid), {
+            lastLogin: serverTimestamp()
+          }, { merge: true });
+
+          alert("✅ Login Successful! Welcome back!");
+
+          if (role === "professional") {
+            router.push("/professional-dashboard");
+          } else if (role === "admin") {
+            router.push("/admin");
+          } else {
+            router.push("/dashboard");
+          }
+        }
+      } catch (error: any) {
+        console.error("Redirect Result Error:", error);
+        if (error.code !== 'auth/no-auth-event') {
+          alert("❌ Login Error: " + error.message);
+        }
+      }
+    };
+
+    handleRedirectResult();
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,7 +101,7 @@ export default function LoginPage() {
     }
   };
 
-  // 🔵 GOOGLE SIGN-IN FUNCTION - WITH EXISTING USER CHECK
+  // 🔵 GOOGLE SIGN-IN FUNCTION - SMART FALLBACK (Popup → Redirect)
   const handleGoogleSignIn = async () => {
     setLoading(true);
     const provider = new GoogleAuthProvider();
@@ -62,6 +112,7 @@ export default function LoginPage() {
     });
 
     try {
+      // Pehle popup try karo (fastest method)
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
 
@@ -69,18 +120,15 @@ export default function LoginPage() {
       const userDoc = await getDoc(doc(db, "users", user.uid));
       
       if (!userDoc.exists()) {
-        // ❌ User nahi mila - logout karo aur error dikhao
         await signOut(auth);
         alert("❌ Account not found! Please register first.");
         router.push("/register");
         return;
       }
 
-      // ✅ User mila - login karo
       const userData = userDoc.data();
       const role = userData.role;
 
-      // Update last login
       await setDoc(doc(db, "users", user.uid), {
         lastLogin: serverTimestamp()
       }, { merge: true });
@@ -98,15 +146,24 @@ export default function LoginPage() {
     } catch (error: any) {
       console.error("Google Sign-In Error:", error);
       
-      if (error.code === 'auth/popup-blocked') {
-        alert("⚠️ Popup was blocked. Please allow popups for this site and try again.");
+      // 🔥 AGAR POPUP BLOCKED HAI, TOH REDIRECT METHOD USE KARO
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/cancelled-popup-request') {
+        console.log("Popup blocked, switching to redirect method...");
+        try {
+          await signInWithRedirect(auth, provider);
+          // Redirect hone ke baad page reload hoga aur useEffect handle karega
+        } catch (redirectError: any) {
+          console.error("Redirect Error:", redirectError);
+          alert("❌ Google Sign-In Failed: " + redirectError.message);
+          setLoading(false);
+        }
       } else if (error.code === 'auth/popup-closed-by-user') {
-        // User closed popup - no error
+        // User ne popup close kiya - koi error nahi
+        setLoading(false);
       } else {
         alert("❌ Google Sign-In Failed: " + error.message);
+        setLoading(false);
       }
-    } finally {
-      setLoading(false);
     }
   };
 
