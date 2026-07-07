@@ -3,11 +3,12 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, getDocs } from "firebase/firestore";
+import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, getDocs, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare, Star, MessageCircle } from "lucide-react";
+import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare, Star, MessageCircle, Navigation, Truck, Wrench, CheckCircle2, Play, PlayCircle } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
+import { statusInfo, TrackingStatus, getActionButton, getStatusProgress } from "@/lib/tracking";
 
 export default function ProfessionalDashboard() {
   const router = useRouter();
@@ -70,7 +71,6 @@ export default function ProfessionalDashboard() {
             const jobsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setCompletedJobs(jobsList);
             
-            // Reviews filter karo (jinme review hai)
             const reviews = jobsList
               .filter(job => job.rated && job.review)
               .sort((a, b) => {
@@ -78,7 +78,7 @@ export default function ProfessionalDashboard() {
                 const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
                 return dateB - dateA;
               })
-              .slice(0, 10); // Latest 10 reviews
+              .slice(0, 10);
             setRecentReviews(reviews);
             
             setLoading(false);
@@ -113,6 +113,13 @@ export default function ProfessionalDashboard() {
         professionalId: auth.currentUser?.uid,
         professionalName: userData?.name,
         professionalPhone: userData?.phone,
+        trackingStatus: "accepted",
+        trackingHistory: arrayUnion({
+          status: "accepted",
+          label: "Professional Assigned",
+          timestamp: serverTimestamp(),
+          note: `${userData?.name} accepted the job`
+        }),
         acceptedAt: new Date().toISOString()
       });
       alert("✅ Job Accepted! Customer ko notify kar diya gaya hai.");
@@ -144,12 +151,55 @@ export default function ProfessionalDashboard() {
     try {
       await updateDoc(doc(db, "bookings", bookingId), {
         status: "completed",
+        trackingStatus: "completed",
+        trackingHistory: arrayUnion({
+          status: "completed",
+          label: "Service Completed",
+          timestamp: serverTimestamp(),
+          note: "Service has been completed"
+        }),
         completedAt: new Date().toISOString()
       });
       alert("✅ Job marked as completed!");
     } catch (error) {
       console.error(error);
       alert("❌ Error completing job");
+    }
+  };
+
+  // ⭐ NEW: Update Tracking Status Function
+  const handleUpdateTracking = async (bookingId: string, currentStatus: TrackingStatus) => {
+    const action = getActionButton(currentStatus);
+    if (!action) return;
+
+    const confirmMessages: Record<string, string> = {
+      "on_the_way": "Kya aap travel shuru kar rahe hain?",
+      "arrived": "Kya aap location par pahunch gaye hain?",
+      "working": "Kya aap kaam shuru kar rahe hain?",
+      "completed": "Kya aap job complete kar rahe hain?"
+    };
+
+    if (!window.confirm(confirmMessages[action.nextStatus] || "Continue?")) return;
+
+    try {
+      await updateDoc(doc(db, "bookings", bookingId), {
+        trackingStatus: action.nextStatus,
+        trackingHistory: arrayUnion({
+          status: action.nextStatus,
+          label: statusInfo[action.nextStatus].label,
+          timestamp: serverTimestamp(),
+          note: `Status updated to ${statusInfo[action.nextStatus].label}`
+        }),
+        // Agar completed hai toh status bhi update karo
+        ...(action.nextStatus === "completed" ? {
+          status: "completed",
+          completedAt: new Date().toISOString()
+        } : {})
+      });
+      alert(`✅ Status updated: ${statusInfo[action.nextStatus].label}`);
+    } catch (error) {
+      console.error(error);
+      alert("❌ Error updating status");
     }
   };
 
@@ -167,7 +217,6 @@ export default function ProfessionalDashboard() {
     }
   };
 
-  // Rating display ke liye helper function
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star 
@@ -177,6 +226,82 @@ export default function ProfessionalDashboard() {
         color={i < rating ? "#fbbf24" : "#d1d5db"} 
       />
     ));
+  };
+
+  // ⭐ NEW: Mini Timeline Component for Professional
+  const MiniTrackingTimeline = ({ booking }: { booking: any }) => {
+    const currentStatus: TrackingStatus = booking.trackingStatus || "accepted";
+    const steps: TrackingStatus[] = ["accepted", "on_the_way", "arrived", "working", "completed"];
+    const currentIndex = steps.indexOf(currentStatus);
+
+    const getStepIcon = (status: TrackingStatus) => {
+      switch (status) {
+        case "accepted": return <CheckCircle size={12} />;
+        case "on_the_way": return <Truck size={12} />;
+        case "arrived": return <MapPin size={12} />;
+        case "working": return <Wrench size={12} />;
+        case "completed": return <CheckCircle2 size={12} />;
+        default: return <Check size={12} />;
+      }
+    };
+
+    return (
+      <div style={{
+        background: "#f0f9ff",
+        padding: "12px",
+        borderRadius: "8px",
+        marginTop: "10px",
+        border: "1px solid #0ea5e9"
+      }}>
+        <div style={{ 
+          display: "flex", 
+          alignItems: "center", 
+          justifyContent: "space-between",
+          gap: "4px"
+        }}>
+          {steps.map((step, index) => {
+            const isCompleted = index <= currentIndex;
+            const info = statusInfo[step];
+            
+            return (
+              <div key={step} style={{ display: "flex", alignItems: "center", flex: 1 }}>
+                <div style={{
+                  width: "24px",
+                  height: "24px",
+                  borderRadius: "50%",
+                  background: isCompleted ? info.color : "#e5e7eb",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "0.7rem",
+                  flexShrink: 0
+                }}>
+                  {getStepIcon(step)}
+                </div>
+                {index < steps.length - 1 && (
+                  <div style={{
+                    flex: 1,
+                    height: "2px",
+                    background: index < currentIndex ? info.color : "#e5e7eb",
+                    margin: "0 2px"
+                  }} />
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <p style={{
+          margin: "8px 0 0 0",
+          fontSize: "0.75rem",
+          color: "#0369a1",
+          fontWeight: "600",
+          textAlign: "center"
+        }}>
+          {statusInfo[currentStatus].icon} {statusInfo[currentStatus].label}
+        </p>
+      </div>
+    );
   };
 
   if (loading) {
@@ -245,7 +370,7 @@ export default function ProfessionalDashboard() {
         </p>
       </div>
 
-      {/* Stats Overview Cards - UPDATED WITH RATINGS */}
+      {/* Stats Overview Cards */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
@@ -291,7 +416,6 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
-        {/* ⭐ NEW: Average Rating Card */}
         <div style={{
           background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
           padding: "24px", borderRadius: "16px",
@@ -309,7 +433,6 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
-        {/* ⭐ NEW: Total Reviews Card */}
         <div style={{
           background: "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)",
           padding: "24px", borderRadius: "16px",
@@ -324,7 +447,7 @@ export default function ProfessionalDashboard() {
         </div>
       </div>
 
-      {/* User Info Cards - UPDATED WITH RATING */}
+      {/* User Info Cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", marginBottom: "30px" }}>
         <div style={{
           background: "white", padding: "24px", borderRadius: "16px",
@@ -359,7 +482,6 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
-        {/* ⭐ NEW: Rating Display Card */}
         <div style={{
           background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
           padding: "24px", borderRadius: "16px",
@@ -396,7 +518,7 @@ export default function ProfessionalDashboard() {
         </div>
       </div>
 
-      {/* Jobs Section with Tabs - UPDATED WITH REVIEWS TAB */}
+      {/* Jobs Section with Tabs */}
       <div style={{
         background: "white", padding: "30px", borderRadius: "20px",
         boxShadow: "0 10px 30px rgba(0,0,0,0.05)"
@@ -406,7 +528,7 @@ export default function ProfessionalDashboard() {
           My Jobs & Reviews
         </h3>
 
-        {/* Tab Buttons - WITH REVIEWS TAB */}
+        {/* Tab Buttons */}
         <div style={{ 
           display: "flex", 
           gap: "10px", 
@@ -459,7 +581,6 @@ export default function ProfessionalDashboard() {
           >
             Completed ({completedJobs.length})
           </button>
-          {/* ⭐ NEW: Reviews Tab */}
           <button
             onClick={() => setActiveTab("reviews")}
             style={{
@@ -562,7 +683,7 @@ export default function ProfessionalDashboard() {
           </>
         )}
 
-        {/* Accepted Jobs */}
+        {/* ⭐ UPDATED: Accepted Jobs with Tracking */}
         {activeTab === "accepted" && (
           <>
             {acceptedJobs.length === 0 ? (
@@ -576,80 +697,103 @@ export default function ProfessionalDashboard() {
               </div>
             ) : (
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "20px" }}>
-                {acceptedJobs.map((booking) => (
-                  <div key={booking.id} style={{
-                    background: "#f0fdf4", padding: "24px", borderRadius: "16px",
-                    border: "2px solid #16a34a", display: "flex", flexDirection: "column", gap: "12px"
-                  }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", flexWrap: "wrap", gap: "10px" }}>
-                      <div>
-                        <h4 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#111827", margin: 0 }}>
-                          {booking.serviceType}
-                        </h4>
-                        <p style={{ fontSize: "0.9rem", color: "#6b7280", margin: "4px 0 0 0" }}>
-                          Customer: {booking.customerName || booking.phone}
-                        </p>
+                {acceptedJobs.map((booking) => {
+                  const currentStatus: TrackingStatus = booking.trackingStatus || "accepted";
+                  const action = getActionButton(currentStatus);
+                  const info = statusInfo[currentStatus];
+                  
+                  return (
+                    <div key={booking.id} style={{
+                      background: "#f0fdf4", padding: "24px", borderRadius: "16px",
+                      border: "2px solid #16a34a", display: "flex", flexDirection: "column", gap: "12px"
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", flexWrap: "wrap", gap: "10px" }}>
+                        <div>
+                          <h4 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#111827", margin: 0 }}>
+                            {booking.serviceType}
+                          </h4>
+                          <p style={{ fontSize: "0.9rem", color: "#6b7280", margin: "4px 0 0 0" }}>
+                            Customer: {booking.customerName || booking.phone}
+                          </p>
+                        </div>
+                        {/* ⭐ NEW: Tracking Status Badge */}
+                        <div style={{
+                          padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "600",
+                          background: info.color + "20", color: info.color,
+                          display: "flex", alignItems: "center", gap: "4px"
+                        }}>
+                          <span>{info.icon}</span>
+                          <span>{info.label}</span>
+                        </div>
                       </div>
-                      <span style={{
-                        padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "600",
-                        background: "#dcfce7", color: "#16a34a"
-                      }}>
-                        ACCEPTED
-                      </span>
-                    </div>
 
-                    <p style={{ color: "#4b5563", margin: 0, fontSize: "0.95rem", lineHeight: 1.4 }}>
-                      <strong>Problem:</strong> {booking.description}
-                    </p>
+                      <p style={{ color: "#4b5563", margin: 0, fontSize: "0.95rem", lineHeight: 1.4 }}>
+                        <strong>Problem:</strong> {booking.description}
+                      </p>
 
-                    <div style={{ display: "flex", flexDirection: "column", gap: "8px", color: "#6b7280", fontSize: "0.9rem" }}>
-                      <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Calendar size={16} color="#16a34a" /> {booking.date}
-                      </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <Clock size={16} color="#16a34a" /> {booking.timeSlot}
-                      </span>
-                      <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                        <MapPin size={16} color="#16a34a" /> {booking.address}
-                      </span>
-                    </div>
+                      <div style={{ display: "flex", flexDirection: "column", gap: "8px", color: "#6b7280", fontSize: "0.9rem" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <Calendar size={16} color="#16a34a" /> {booking.date}
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <Clock size={16} color="#16a34a" /> {booking.timeSlot}
+                        </span>
+                        <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                          <MapPin size={16} color="#16a34a" /> {booking.address}
+                        </span>
+                      </div>
 
-                    <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
-                      <button 
-                        onClick={() => handleOpenChat(booking)}
-                        style={{
-                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                          background: "#d97706", color: "white", border: "none",
-                          padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem"
-                        }}
-                      >
-                        <MessageSquare size={16} /> Chat
-                      </button>
-                      <button 
-                        onClick={() => handleCompleteJob(booking.id)}
-                        style={{
-                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                          background: "#2563eb", color: "white", border: "none",
-                          padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem"
-                        }}
-                      >
-                        <Check size={16} /> Mark Complete
-                      </button>
-                      {booking.phone && (
-                        <a 
-                          href={`tel:${booking.phone}`}
+                      {/* ⭐ NEW: Mini Tracking Timeline */}
+                      <MiniTrackingTimeline booking={booking} />
+
+                      {/* ⭐ NEW: Dynamic Action Button */}
+                      {action && (
+                        <button 
+                          onClick={() => handleUpdateTracking(booking.id, currentStatus)}
                           style={{
-                            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                            background: "#16a34a", color: "white", border: "none",
-                            padding: "10px", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "0.9rem"
+                            width: "100%",
+                            display: "flex", alignItems: "center", justifyContent: "center", gap: "8px",
+                            background: `linear-gradient(135deg, ${info.color}, ${info.color}dd)`,
+                            color: "white", border: "none",
+                            padding: "12px", borderRadius: "8px", cursor: "pointer", 
+                            fontWeight: "700", fontSize: "0.95rem",
+                            boxShadow: `0 4px 12px ${info.color}40`,
+                            marginTop: "8px"
                           }}
                         >
-                          <Phone size={16} /> Call
-                        </a>
+                          <PlayCircle size={18} />
+                          {action.label}
+                        </button>
                       )}
+
+                      {/* Other Action Buttons */}
+                      <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
+                        <button 
+                          onClick={() => handleOpenChat(booking)}
+                          style={{
+                            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                            background: "#d97706", color: "white", border: "none",
+                            padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem"
+                          }}
+                        >
+                          <MessageSquare size={16} /> Chat
+                        </button>
+                        {booking.phone && (
+                          <a 
+                            href={`tel:${booking.phone}`}
+                            style={{
+                              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                              background: "#16a34a", color: "white", border: "none",
+                              padding: "10px", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "0.9rem"
+                            }}
+                          >
+                            <Phone size={16} /> Call
+                          </a>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </>
@@ -745,7 +889,7 @@ export default function ProfessionalDashboard() {
           </>
         )}
 
-        {/* ⭐ NEW: Reviews Tab */}
+        {/* Reviews Tab */}
         {activeTab === "reviews" && (
           <>
             {recentReviews.length === 0 ? (
@@ -763,7 +907,6 @@ export default function ProfessionalDashboard() {
               </div>
             ) : (
               <div style={{ display: "grid", gap: "16px" }}>
-                {/* Overall Rating Summary */}
                 <div style={{
                   background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
                   padding: "24px", borderRadius: "16px",
@@ -784,7 +927,6 @@ export default function ProfessionalDashboard() {
                   </div>
                 </div>
 
-                {/* Individual Reviews */}
                 {recentReviews.map((review) => (
                   <div key={review.id} style={{
                     background: "white", padding: "20px", borderRadius: "12px",

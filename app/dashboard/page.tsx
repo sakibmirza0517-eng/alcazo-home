@@ -6,9 +6,10 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare, Star } from "lucide-react";
+import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare, Star, Navigation, Truck, Wrench, CheckCircle } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
 import { submitRating } from "@/lib/rating";
+import { statusInfo, TrackingStatus, getStatusProgress } from "@/lib/tracking";
 
 export default function CustomerDashboard() {
   const router = useRouter();
@@ -137,6 +138,30 @@ export default function CustomerDashboard() {
     }
   };
 
+  // ⭐ NEW: Helper function to format timestamp
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return "";
+    try {
+      const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+      return date.toLocaleString("en-IN", { 
+        hour: "2-digit", 
+        minute: "2-digit",
+        hour12: true,
+        day: "2-digit",
+        month: "short"
+      });
+    } catch {
+      return "";
+    }
+  };
+
+  // ⭐ NEW: Get timestamp for a specific status from trackingHistory
+  const getStatusTimestamp = (booking: any, status: TrackingStatus) => {
+    if (!booking.trackingHistory || !Array.isArray(booking.trackingHistory)) return null;
+    const entry = booking.trackingHistory.find((h: any) => h.status === status);
+    return entry?.timestamp || null;
+  };
+
   const pendingBookings = bookings.filter(b => b.status === "pending");
   const acceptedBookings = bookings.filter(b => b.status === "accepted");
   const completedBookings = bookings.filter(b => b.status === "completed");
@@ -151,6 +176,208 @@ export default function CustomerDashboard() {
       case "completed": return [...completedBookings, ...cancelledBookings];
       default: return bookings;
     }
+  };
+
+  // ⭐ NEW: Tracking Timeline Component
+  const TrackingTimeline = ({ booking }: { booking: any }) => {
+    const currentStatus: TrackingStatus = booking.trackingStatus || "accepted";
+    const steps: TrackingStatus[] = ["accepted", "on_the_way", "arrived", "working", "completed"];
+    const currentIndex = steps.indexOf(currentStatus);
+    const progress = getStatusProgress(currentStatus);
+
+    const getStepIcon = (status: TrackingStatus) => {
+      switch (status) {
+        case "accepted": return <CheckCircle size={18} />;
+        case "on_the_way": return <Truck size={18} />;
+        case "arrived": return <MapPin size={18} />;
+        case "working": return <Wrench size={18} />;
+        case "completed": return <CheckCircle2 size={18} />;
+        default: return <Check size={18} />;
+      }
+    };
+
+    return (
+      <div style={{
+        background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)",
+        padding: "20px",
+        borderRadius: "12px",
+        border: "2px solid #0ea5e9",
+        marginTop: "15px"
+      }}>
+        {/* Header */}
+        <div style={{ 
+          display: "flex", 
+          justifyContent: "space-between", 
+          alignItems: "center", 
+          marginBottom: "16px",
+          flexWrap: "wrap",
+          gap: "10px"
+        }}>
+          <h5 style={{ 
+            margin: 0, 
+            fontSize: "1rem", 
+            fontWeight: "700", 
+            color: "#0369a1",
+            display: "flex",
+            alignItems: "center",
+            gap: "8px"
+          }}>
+            <Navigation size={18} />
+            Live Tracking
+          </h5>
+          <div style={{
+            background: statusInfo[currentStatus].color,
+            color: "white",
+            padding: "4px 12px",
+            borderRadius: "20px",
+            fontSize: "0.75rem",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px"
+          }}>
+            <span>{statusInfo[currentStatus].icon}</span>
+            <span>{statusInfo[currentStatus].label}</span>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div style={{
+          width: "100%",
+          height: "6px",
+          background: "#e5e7eb",
+          borderRadius: "10px",
+          marginBottom: "20px",
+          overflow: "hidden"
+        }}>
+          <div style={{
+            width: `${progress}%`,
+            height: "100%",
+            background: "linear-gradient(90deg, #0ea5e9, #0284c7)",
+            borderRadius: "10px",
+            transition: "width 0.5s ease"
+          }} />
+        </div>
+
+        {/* Timeline Steps */}
+        <div style={{ position: "relative", paddingLeft: "30px" }}>
+          {steps.map((step, index) => {
+            const isCompleted = index <= currentIndex;
+            const isCurrent = index === currentIndex;
+            const timestamp = getStatusTimestamp(booking, step);
+            const info = statusInfo[step];
+
+            return (
+              <div key={step} style={{ 
+                display: "flex", 
+                alignItems: "flex-start", 
+                marginBottom: index < steps.length - 1 ? "20px" : "0",
+                position: "relative"
+              }}>
+                {/* Vertical Line */}
+                {index < steps.length - 1 && (
+                  <div style={{
+                    position: "absolute",
+                    left: "-21px",
+                    top: "24px",
+                    width: "2px",
+                    height: "calc(100% + 8px)",
+                    background: index < currentIndex ? "#0ea5e9" : "#e5e7eb"
+                  }} />
+                )}
+
+                {/* Step Icon */}
+                <div style={{
+                  position: "absolute",
+                  left: "-30px",
+                  width: "20px",
+                  height: "20px",
+                  borderRadius: "50%",
+                  background: isCompleted ? info.color : "#e5e7eb",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: isCurrent ? `0 0 0 4px ${info.color}30` : "none",
+                  animation: isCurrent ? "pulse 2s infinite" : "none"
+                }}>
+                  <div style={{ transform: "scale(0.7)" }}>
+                    {getStepIcon(step)}
+                  </div>
+                </div>
+
+                {/* Step Content */}
+                <div style={{ flex: 1 }}>
+                  <div style={{ 
+                    display: "flex", 
+                    justifyContent: "space-between", 
+                    alignItems: "center",
+                    flexWrap: "wrap",
+                    gap: "8px"
+                  }}>
+                    <p style={{ 
+                      margin: 0, 
+                      fontSize: "0.95rem", 
+                      fontWeight: isCurrent ? "700" : "600",
+                      color: isCompleted ? "#111827" : "#9ca3af"
+                    }}>
+                      {info.label}
+                    </p>
+                    {timestamp && (
+                      <span style={{ 
+                        fontSize: "0.75rem", 
+                        color: "#6b7280",
+                        fontWeight: "500"
+                      }}>
+                        {formatTimestamp(timestamp)}
+                      </span>
+                    )}
+                  </div>
+                  {isCurrent && currentStatus === "on_the_way" && (
+                    <p style={{ 
+                      margin: "4px 0 0 0", 
+                      fontSize: "0.8rem", 
+                      color: "#0369a1",
+                      fontStyle: "italic"
+                    }}>
+                      🚗 Professional is on the way to your location
+                    </p>
+                  )}
+                  {isCurrent && currentStatus === "arrived" && (
+                    <p style={{ 
+                      margin: "4px 0 0 0", 
+                      fontSize: "0.8rem", 
+                      color: "#7c3aed",
+                      fontStyle: "italic"
+                    }}>
+                      📍 Professional has arrived at your location
+                    </p>
+                  )}
+                  {isCurrent && currentStatus === "working" && (
+                    <p style={{ 
+                      margin: "4px 0 0 0", 
+                      fontSize: "0.8rem", 
+                      color: "#c2410c",
+                      fontStyle: "italic"
+                    }}>
+                      🔧 Service is in progress
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Pulse Animation CSS */}
+        <style>{`
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+          }
+        `}</style>
+      </div>
+    );
   };
 
   if (loading) {
@@ -311,6 +538,90 @@ export default function CustomerDashboard() {
           </div>
         </div>
       </div>
+
+      {/* ⭐ NEW: Active Tracking Section (Top Priority) */}
+      {acceptedBookings.filter(b => b.trackingStatus && b.trackingStatus !== "accepted").length > 0 && (
+        <div style={{
+          background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)", 
+          padding: "30px", borderRadius: "20px",
+          boxShadow: "0 10px 30px rgba(14, 165, 233, 0.2)", 
+          marginBottom: "30px",
+          border: "2px solid #0ea5e9"
+        }}>
+          <h3 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#0369a1", marginBottom: "20px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <Navigation size={24} />
+            Live Tracking Active
+          </h3>
+          <div style={{ display: "grid", gap: "16px" }}>
+            {acceptedBookings
+              .filter(b => b.trackingStatus && b.trackingStatus !== "accepted")
+              .map((booking) => (
+                <div key={booking.id} style={{
+                  background: "white", padding: "20px", borderRadius: "12px",
+                  border: "2px solid #0ea5e9"
+                }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
+                    <h4 style={{ fontSize: "1.2rem", fontWeight: "700", color: "#0369a1", margin: 0 }}>
+                      🚗 {booking.serviceType} - {statusInfo[booking.trackingStatus as TrackingStatus]?.label}
+                    </h4>
+                  </div>
+                  <p style={{ margin: "0 0 10px 0", color: "#4b5563", fontSize: "1rem" }}>
+                    <strong>Professional:</strong> {booking.professionalName || "N/A"}
+                  </p>
+                  <p style={{ margin: "0 0 10px 0", color: "#4b5563" }}>
+                    <strong>Problem:</strong> {booking.description}
+                  </p>
+                  
+                  {/* ⭐ NEW: Full Tracking Timeline */}
+                  <TrackingTimeline booking={booking} />
+
+                  <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "15px" }}>
+                    <button
+                      onClick={() => handleOpenChat(booking)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: "#d97706",
+                        color: "white",
+                        padding: "10px 16px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "600",
+                        fontSize: "0.9rem",
+                        cursor: "pointer"
+                      }}
+                    >
+                      <MessageSquare size={18} />
+                      Chat
+                    </button>
+                    
+                    {booking.professionalPhone && (
+                      <a 
+                        href={`tel:${booking.professionalPhone}`}
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: "8px",
+                          background: "#16a34a",
+                          color: "white",
+                          padding: "10px 16px",
+                          borderRadius: "8px",
+                          textDecoration: "none",
+                          fontWeight: "600",
+                          fontSize: "0.9rem"
+                        }}
+                      >
+                        <Phone size={18} />
+                        Call
+                      </a>
+                    )}
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+      )}
 
       {/* Accepted Jobs Section - Notification Style */}
       {unreadAcceptedBookings.length > 0 && (
@@ -537,9 +848,14 @@ export default function CustomerDashboard() {
                     </span>
                   </div>
 
+                  {/* ⭐ NEW: Show tracking timeline for accepted bookings in list */}
+                  {booking.status === "accepted" && booking.trackingStatus && booking.trackingStatus !== "pending" && (
+                    <TrackingTimeline booking={booking} />
+                  )}
+
                   {/* Action buttons for accepted bookings */}
                   {booking.status === "accepted" && (
-                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                    <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginTop: "10px" }}>
                       <button
                         onClick={() => handleOpenChat(booking)}
                         style={{
@@ -583,7 +899,7 @@ export default function CustomerDashboard() {
                     </div>
                   )}
 
-                  {/* ⭐ NEW: Rate button for completed bookings */}
+                  {/* ⭐ Rate button for completed bookings */}
                   {booking.status === "completed" && !booking.rated && booking.professionalId && (
                     <button
                       onClick={() => handleOpenRating(booking)}

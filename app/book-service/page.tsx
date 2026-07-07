@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { Calendar, Clock, MapPin, Phone, FileText, ArrowLeft, Hammer } from "lucide-react";
 
@@ -11,6 +11,7 @@ export default function BookServicePage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
+  const [customerName, setCustomerName] = useState("");
 
   // Form States
   const [serviceType, setServiceType] = useState("Carpenter");
@@ -22,11 +23,16 @@ export default function BookServicePage() {
 
   // Check if user is logged in
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
         router.push("/login");
       } else {
         setUser(currentUser);
+        // Fetch customer name
+        const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+        if (userDoc.exists()) {
+          setCustomerName(userDoc.data().name || "");
+        }
       }
     });
     return () => unsubscribe();
@@ -38,9 +44,10 @@ export default function BookServicePage() {
     setLoading(true);
 
     try {
-      // Save booking to Firebase Firestore
+      // Save booking to Firebase Firestore with tracking initialized
       await addDoc(collection(db, "bookings"), {
         customerId: user.uid,
+        customerName: customerName,
         serviceType: serviceType,
         description: description,
         date: date,
@@ -48,7 +55,20 @@ export default function BookServicePage() {
         address: address,
         phone: phone,
         status: "pending",
-        createdAt: serverTimestamp()
+        
+        // ⭐ NEW: Tracking System
+        trackingStatus: "pending",
+        trackingHistory: [
+          {
+            status: "pending",
+            label: "Booking Created",
+            timestamp: serverTimestamp(),
+            note: "Your booking has been received"
+          }
+        ],
+        
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
 
       alert("✅ Booking Successful! A professional will contact you soon.");

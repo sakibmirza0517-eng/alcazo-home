@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { 
   ArrowLeft, Send, Phone, MapPin, Calendar, Clock, 
   Check, CheckCheck, MessageCircle, Loader2 
@@ -14,6 +14,7 @@ import {
   listenToMessages, 
   markMessagesAsRead 
 } from "@/lib/chat";
+import { statusInfo, TrackingStatus } from "@/lib/tracking";
 
 export default function ChatRoom() {
   const router = useRouter();
@@ -27,13 +28,12 @@ export default function ChatRoom() {
   const [booking, setBooking] = useState<any>(null);
   const [otherUser, setOtherUser] = useState<any>(null);
   const [sending, setSending] = useState(false);
+  const [trackingStatus, setTrackingStatus] = useState<TrackingStatus>("pending");
   
-  // REFS for perfect scrolling
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const currentUser = auth.currentUser;
 
-  // PERFECT SCROLL FUNCTION (Sirf message box ko scroll karega)
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
       messagesContainerRef.current.scrollTop = messagesContainerRef.current.scrollHeight;
@@ -44,7 +44,6 @@ export default function ChatRoom() {
     scrollToBottom();
   }, [messages]);
 
-  // BODY SCROLL LOCK (Taaki footer scroll na ho)
   useEffect(() => {
     document.body.style.overflow = 'hidden';
     return () => {
@@ -69,6 +68,7 @@ export default function ChatRoom() {
 
         const bookingData = { id: bookingDoc.id, ...bookingDoc.data() };
         setBooking(bookingData);
+        setTrackingStatus(bookingData.trackingStatus || "pending");
 
         const isCustomer = bookingData.customerId === currentUser.uid;
         const isProfessional = bookingData.professionalId === currentUser.uid;
@@ -104,6 +104,20 @@ export default function ChatRoom() {
 
     initChat();
   }, [bookingId, currentUser, router]);
+
+  // ⭐ NEW: Real-time tracking status listener
+  useEffect(() => {
+    if (!bookingId) return;
+
+    const unsubscribe = onSnapshot(doc(db, "bookings", bookingId), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setTrackingStatus(data.trackingStatus || "pending");
+      }
+    });
+
+    return () => unsubscribe();
+  }, [bookingId]);
 
   useEffect(() => {
     if (!chatId) return;
@@ -194,20 +208,20 @@ export default function ChatRoom() {
     );
   }
 
+  const currentStatusInfo = statusInfo[trackingStatus];
+
   return (
     <>
-      {/* ⭐ MAGIC CSS: Hide Scrollbar for Premium Mobile Feel */}
       <style>{`
         .hide-scrollbar::-webkit-scrollbar {
-          display: none; /* Chrome, Safari, Edge, Mobile */
+          display: none;
         }
         .hide-scrollbar {
-          -ms-overflow-style: none;  /* IE and Edge */
-          scrollbar-width: none;  /* Firefox */
+          -ms-overflow-style: none;
+          scrollbar-width: none;
         }
       `}</style>
 
-      {/* ⭐ MAIN APP-LIKE CONTAINER (Covers the whole screen & hides footer) */}
       <div style={{ 
         position: 'fixed', 
         top: 0, 
@@ -220,7 +234,7 @@ export default function ChatRoom() {
         zIndex: 50 
       }}>
         
-        {/* 1. HEADER (Fixed at top) */}
+        {/* 1. HEADER with Tracking Status Badge */}
         <div style={{
           background: "white",
           padding: "16px 20px",
@@ -254,6 +268,22 @@ export default function ChatRoom() {
             </p>
           </div>
 
+          {/* ⭐ NEW: Tracking Status Badge */}
+          <div style={{
+            background: currentStatusInfo.color + "20",
+            color: currentStatusInfo.color,
+            padding: "6px 12px",
+            borderRadius: "20px",
+            fontSize: "0.75rem",
+            fontWeight: "700",
+            display: "flex",
+            alignItems: "center",
+            gap: "4px"
+          }}>
+            <span>{currentStatusInfo.icon}</span>
+            <span>{currentStatusInfo.label}</span>
+          </div>
+
           {otherUser?.phone && (
             <a 
               href={`tel:${otherUser.phone}`}
@@ -264,19 +294,56 @@ export default function ChatRoom() {
           )}
         </div>
 
-        {/* Booking Info (Fixed below header) */}
+        {/* Booking Info with Tracking Timeline Preview */}
         <div style={{
-          background: "#fffbeb", padding: "10px 20px", display: "flex", gap: "16px",
-          fontSize: "0.8rem", color: "#6b7280", borderBottom: "1px solid #e5e7eb", flexShrink: 0
+          background: "#fffbeb", padding: "12px 20px", 
+          borderBottom: "1px solid #e5e7eb", flexShrink: 0
         }}>
-          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={14} /> {booking.date}</span>
-          <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><MapPin size={14} /> {booking.address}</span>
+          <div style={{ display: "flex", gap: "16px", fontSize: "0.8rem", color: "#6b7280", marginBottom: "8px" }}>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><Calendar size={14} /> {booking.date}</span>
+            <span style={{ display: "flex", alignItems: "center", gap: "4px" }}><MapPin size={14} /> {booking.address}</span>
+          </div>
+          
+          {/* ⭐ NEW: Mini Timeline Preview */}
+          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "0.75rem" }}>
+            {["pending", "accepted", "on_the_way", "arrived", "working", "completed"].map((status, index) => {
+              const statusKey = status as TrackingStatus;
+              const info = statusInfo[statusKey];
+              const isActive = ["pending", "accepted", "on_the_way", "arrived", "working", "completed"].indexOf(trackingStatus) >= index;
+              
+              return (
+                <div key={status} style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                  <div style={{
+                    width: "20px",
+                    height: "20px",
+                    borderRadius: "50%",
+                    background: isActive ? info.color : "#e5e7eb",
+                    color: isActive ? "white" : "#9ca3af",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "0.7rem",
+                    fontWeight: "700"
+                  }}>
+                    {info.icon}
+                  </div>
+                  {index < 5 && (
+                    <div style={{
+                      width: "20px",
+                      height: "2px",
+                      background: isActive ? info.color : "#e5e7eb"
+                    }} />
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* 2. MESSAGES AREA (Sirf yahi scroll hoga, scrollbar hidden rahega!) */}
+        {/* 2. MESSAGES AREA */}
         <div 
           ref={messagesContainerRef}
-          className="hide-scrollbar"  // ⭐ YE CLASS SCROLLBAR HIDE KAREGI
+          className="hide-scrollbar"
           style={{
             flex: 1, 
             overflowY: "auto", 
@@ -286,7 +353,7 @@ export default function ChatRoom() {
             flexDirection: "column",
             gap: "12px",
             scrollBehavior: "smooth",
-            WebkitOverflowScrolling: "touch" // iOS smooth touch
+            WebkitOverflowScrolling: "touch"
           }}
         >
           {messages.length === 0 ? (
@@ -322,7 +389,7 @@ export default function ChatRoom() {
           <div ref={messagesEndRef} />
         </div>
 
-        {/* 3. INPUT AREA (Fixed at bottom) */}
+        {/* 3. INPUT AREA */}
         <div style={{
           background: "white", padding: "16px 20px", borderTop: "1px solid #e5e7eb",
           display: "flex", gap: "12px", alignItems: "center", flexShrink: 0
