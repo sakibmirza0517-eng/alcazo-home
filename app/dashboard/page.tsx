@@ -6,7 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, MessageCircle, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
 
 export default function CustomerDashboard() {
@@ -319,29 +319,6 @@ export default function CustomerDashboard() {
                     <MessageSquare size={18} />
                     Chat
                   </button>
-
-                  {booking.professionalPhone && (
-                    <a 
-                      href={`https://wa.me/91${booking.professionalPhone}?text=${encodeURIComponent(`Namaste ${booking.professionalName}, main Alcazo se booking kar raha hu.`)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      style={{
-                        display: "inline-flex",
-                        alignItems: "center",
-                        gap: "8px",
-                        background: "#25D366",
-                        color: "white",
-                        padding: "10px 16px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        fontWeight: "600",
-                        fontSize: "0.9rem"
-                      }}
-                    >
-                      <MessageCircle size={18} />
-                      WhatsApp
-                    </a>
-                  )}
                   
                   <button
                     onClick={() => handleMarkAsRead(booking.id)}
@@ -505,7 +482,7 @@ export default function CustomerDashboard() {
                     </span>
                   </div>
 
-                  {/* Action buttons for accepted bookings */}
+                  {/* Action buttons for accepted bookings - NO WHATSAPP */}
                   {booking.status === "accepted" && (
                     <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                       <button
@@ -529,46 +506,24 @@ export default function CustomerDashboard() {
                       </button>
 
                       {booking.professionalPhone && (
-                        <>
-                          <a 
-                            href={`https://wa.me/91${booking.professionalPhone}?text=${encodeURIComponent(`Namaste ${booking.professionalName}, main Alcazo se booking kar raha hu.`)}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              background: "#25D366",
-                              color: "white",
-                              padding: "8px 14px",
-                              borderRadius: "8px",
-                              textDecoration: "none",
-                              fontWeight: "600",
-                              fontSize: "0.85rem"
-                            }}
-                          >
-                            <MessageCircle size={16} />
-                            WhatsApp
-                          </a>
-                          <a 
-                            href={`tel:${booking.professionalPhone}`}
-                            style={{
-                              display: "inline-flex",
-                              alignItems: "center",
-                              gap: "8px",
-                              background: "#16a34a",
-                              color: "white",
-                              padding: "8px 14px",
-                              borderRadius: "8px",
-                              textDecoration: "none",
-                              fontWeight: "600",
-                              fontSize: "0.85rem"
-                            }}
-                          >
-                            <Phone size={16} />
-                            Call
-                          </a>
-                        </>
+                        <a 
+                          href={`tel:${booking.professionalPhone}`}
+                          style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            background: "#16a34a",
+                            color: "white",
+                            padding: "8px 14px",
+                            borderRadius: "8px",
+                            textDecoration: "none",
+                            fontWeight: "600",
+                            fontSize: "0.85rem"
+                          }}
+                        >
+                          <Phone size={16} />
+                          Emergency Call
+                        </a>
                       )}
                     </div>
                   )}

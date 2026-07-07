@@ -6,7 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, MessageCircle, CheckCircle, XCircle, TrendingUp, AlertCircle, Check, DollarSign, MessageSquare } from "lucide-react";
+import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
 
 export default function ProfessionalDashboard() {
@@ -138,12 +138,6 @@ export default function ProfessionalDashboard() {
       console.error(error);
       alert("❌ Error completing job");
     }
-  };
-
-  const handleContactCustomer = (phone: string, name: string) => {
-    const message = `Namaste ${name}, main Alcazo se hu. Aapki booking mili hai.`;
-    const url = `https://wa.me/91${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
   };
 
   // Chat open karna
@@ -400,7 +394,7 @@ export default function ProfessionalDashboard() {
           </button>
         </div>
 
-        {/* Available Jobs */}
+        {/* Available Jobs - NO WHATSAPP */}
         {activeTab === "available" && (
           <>
             {availableJobs.length === 0 ? (
@@ -452,6 +446,7 @@ export default function ProfessionalDashboard() {
                       </span>
                     </div>
 
+                    {/* Action Buttons - ONLY Accept & Reject (No WhatsApp) */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                       <button 
                         onClick={() => handleAcceptJob(booking.id)}
@@ -473,16 +468,6 @@ export default function ProfessionalDashboard() {
                       >
                         <XCircle size={16} /> Reject
                       </button>
-                      <button 
-                        onClick={() => handleContactCustomer(booking.phone, booking.customerName || "Customer")}
-                        style={{
-                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                          background: "#25D366", color: "white", border: "none",
-                          padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem"
-                        }}
-                      >
-                        <MessageCircle size={16} /> WhatsApp
-                      </button>
                     </div>
                   </div>
                 ))}
@@ -491,7 +476,7 @@ export default function ProfessionalDashboard() {
           </>
         )}
 
-        {/* Accepted Jobs */}
+        {/* Accepted Jobs - NO WHATSAPP, Added Emergency Call */}
         {activeTab === "accepted" && (
           <>
             {acceptedJobs.length === 0 ? (
@@ -543,7 +528,7 @@ export default function ProfessionalDashboard() {
                       </span>
                     </div>
 
-                    {/* Action Buttons */}
+                    {/* Action Buttons - Chat, Mark Complete, Emergency Call (NO WhatsApp) */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                       <button 
                         onClick={() => handleOpenChat(booking)}
@@ -565,16 +550,18 @@ export default function ProfessionalDashboard() {
                       >
                         <Check size={16} /> Mark Complete
                       </button>
-                      <button 
-                        onClick={() => handleContactCustomer(booking.phone, booking.customerName || "Customer")}
-                        style={{
-                          flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
-                          background: "#25D366", color: "white", border: "none",
-                          padding: "10px", borderRadius: "8px", cursor: "pointer", fontWeight: "600", fontSize: "0.9rem"
-                        }}
-                      >
-                        <MessageCircle size={16} /> WhatsApp
-                      </button>
+                      {booking.phone && (
+                        <a 
+                          href={`tel:${booking.phone}`}
+                          style={{
+                            flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: "6px",
+                            background: "#16a34a", color: "white", border: "none",
+                            padding: "10px", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "0.9rem"
+                          }}
+                        >
+                          <Phone size={16} /> Emergency Call
+                        </a>
+                      )}
                     </div>
                   </div>
                 ))}
