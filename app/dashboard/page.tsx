@@ -6,8 +6,9 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare } from "lucide-react";
+import { Hammer, LogOut, Calendar, User, Phone, Mail, Clock, MapPin, Bell, Check, TrendingUp, AlertCircle, CheckCircle2, MessageSquare, Star } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
+import { submitRating } from "@/lib/rating";
 
 export default function CustomerDashboard() {
   const router = useRouter();
@@ -15,6 +16,14 @@ export default function CustomerDashboard() {
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"all" | "pending" | "accepted" | "completed">("all");
+  
+  // Rating states
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [currentBooking, setCurrentBooking] = useState<any>(null);
+  const [rating, setRating] = useState(0);
+  const [hoverRating, setHoverRating] = useState(0);
+  const [review, setReview] = useState("");
+  const [submittingRating, setSubmittingRating] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -67,7 +76,6 @@ export default function CustomerDashboard() {
     }
   };
 
-  // Chat open karna
   const handleOpenChat = async (booking: any) => {
     try {
       const chatId = await createOrGetChat(
@@ -79,6 +87,53 @@ export default function CustomerDashboard() {
     } catch (error) {
       console.error("Error opening chat:", error);
       alert("Failed to open chat");
+    }
+  };
+
+  // Rating functions
+  const handleOpenRating = (booking: any) => {
+    setCurrentBooking(booking);
+    setShowRatingModal(true);
+    setRating(0);
+    setReview("");
+  };
+
+  const handleCloseRating = () => {
+    setShowRatingModal(false);
+    setCurrentBooking(null);
+    setRating(0);
+    setReview("");
+  };
+
+  const handleSubmitRating = async () => {
+    if (rating === 0) {
+      alert("Please select a rating");
+      return;
+    }
+
+    if (!currentBooking || !auth.currentUser) return;
+
+    setSubmittingRating(true);
+    try {
+      const result = await submitRating(
+        currentBooking.id,
+        auth.currentUser.uid,
+        currentBooking.professionalId,
+        rating,
+        review
+      );
+
+      if (result.success) {
+        alert("✅ Thank you for your rating!");
+        handleCloseRating();
+      } else {
+        alert("❌ Failed to submit rating");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("❌ Error submitting rating");
+    } finally {
+      setSubmittingRating(false);
     }
   };
 
@@ -482,7 +537,7 @@ export default function CustomerDashboard() {
                     </span>
                   </div>
 
-                  {/* Action buttons for accepted bookings - NO WHATSAPP */}
+                  {/* Action buttons for accepted bookings */}
                   {booking.status === "accepted" && (
                     <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
                       <button
@@ -527,12 +582,181 @@ export default function CustomerDashboard() {
                       )}
                     </div>
                   )}
+
+                  {/* ⭐ NEW: Rate button for completed bookings */}
+                  {booking.status === "completed" && !booking.rated && booking.professionalId && (
+                    <button
+                      onClick={() => handleOpenRating(booking)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "8px",
+                        background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+                        color: "#111827",
+                        padding: "8px 14px",
+                        borderRadius: "8px",
+                        border: "none",
+                        fontWeight: "700",
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        marginTop: "10px"
+                      }}
+                    >
+                      <Star size={16} fill="#111827" />
+                      Rate Professional
+                    </button>
+                  )}
+
+                  {/* Show rating if already rated */}
+                  {booking.status === "completed" && booking.rated && (
+                    <div style={{
+                      marginTop: "10px",
+                      padding: "10px",
+                      background: "#fef3c7",
+                      borderRadius: "8px",
+                      border: "1px solid #fbbf24"
+                    }}>
+                      <p style={{ margin: 0, fontSize: "0.9rem", color: "#92400e" }}>
+                        <strong>Your Rating:</strong> {"⭐".repeat(booking.rating)} ({booking.rating}/5)
+                      </p>
+                      {booking.review && (
+                        <p style={{ margin: "5px 0 0 0", fontSize: "0.85rem", color: "#78350f" }}>
+                          <strong>Review:</strong> {booking.review}
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
           </div>
         )}
       </div>
+
+      {/* ⭐ RATING MODAL */}
+      {showRatingModal && currentBooking && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: "rgba(0,0,0,0.6)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000,
+          padding: "20px"
+        }}>
+          <div style={{
+            background: "white",
+            padding: "30px",
+            borderRadius: "20px",
+            maxWidth: "500px",
+            width: "100%",
+            boxShadow: "0 20px 60px rgba(0,0,0,0.3)"
+          }}>
+            <h3 style={{ margin: "0 0 10px 0", fontSize: "1.5rem", fontWeight: "700", color: "#111827", textAlign: "center" }}>
+              Rate Your Experience
+            </h3>
+            <p style={{ margin: "0 0 20px 0", color: "#6b7280", textAlign: "center", fontSize: "0.9rem" }}>
+              How was your experience with {currentBooking.professionalName}?
+            </p>
+
+            {/* Stars */}
+            <div style={{ display: "flex", justifyContent: "center", gap: "10px", marginBottom: "20px" }}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <button
+                  key={star}
+                  onClick={() => setRating(star)}
+                  onMouseEnter={() => setHoverRating(star)}
+                  onMouseLeave={() => setHoverRating(0)}
+                  style={{
+                    background: "none",
+                    border: "none",
+                    cursor: "pointer",
+                    fontSize: "2.5rem",
+                    transition: "transform 0.2s",
+                    transform: (hoverRating || rating) >= star ? "scale(1.1)" : "scale(1)"
+                  }}
+                >
+                  {(hoverRating || rating) >= star ? "⭐" : "☆"}
+                </button>
+              ))}
+            </div>
+
+            {/* Rating text */}
+            {rating > 0 && (
+              <p style={{ textAlign: "center", color: "#d97706", fontWeight: "600", marginBottom: "20px" }}>
+                {rating === 1 && "Poor"}
+                {rating === 2 && "Fair"}
+                {rating === 3 && "Good"}
+                {rating === 4 && "Very Good"}
+                {rating === 5 && "Excellent!"}
+              </p>
+            )}
+
+            {/* Review textarea */}
+            <textarea
+              value={review}
+              onChange={(e) => setReview(e.target.value)}
+              placeholder="Write your review (optional)..."
+              style={{
+                width: "100%",
+                padding: "12px",
+                borderRadius: "10px",
+                border: "2px solid #e5e7eb",
+                marginBottom: "20px",
+                minHeight: "100px",
+                fontSize: "0.95rem",
+                resize: "vertical",
+                fontFamily: "inherit",
+                boxSizing: "border-box"
+              }}
+              onFocus={(e) => e.target.style.borderColor = "#d97706"}
+              onBlur={(e) => e.target.style.borderColor = "#e5e7eb"}
+            />
+
+            {/* Buttons */}
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button
+                onClick={handleSubmitRating}
+                disabled={submittingRating || rating === 0}
+                style={{
+                  flex: 1,
+                  background: submittingRating || rating === 0 ? "#e5e7eb" : "linear-gradient(135deg, #d97706, #b45309)",
+                  color: submittingRating || rating === 0 ? "#9ca3af" : "white",
+                  border: "none",
+                  padding: "12px",
+                  borderRadius: "10px",
+                  fontWeight: "700",
+                  fontSize: "1rem",
+                  cursor: submittingRating || rating === 0 ? "not-allowed" : "pointer"
+                }}
+              >
+                {submittingRating ? "Submitting..." : "Submit Rating"}
+              </button>
+              <button
+                onClick={handleCloseRating}
+                disabled={submittingRating}
+                style={{
+                  flex: 1,
+                  background: "#f3f4f6",
+                  color: "#374151",
+                  border: "none",
+                  padding: "12px",
+                  borderRadius: "10px",
+                  fontWeight: "700",
+                  fontSize: "1rem",
+                  cursor: "pointer"
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

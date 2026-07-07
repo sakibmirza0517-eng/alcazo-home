@@ -6,7 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, getDocs } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare } from "lucide-react";
+import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare, Star, MessageCircle } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
 
 export default function ProfessionalDashboard() {
@@ -16,8 +16,9 @@ export default function ProfessionalDashboard() {
   const [availableJobs, setAvailableJobs] = useState<any[]>([]);
   const [acceptedJobs, setAcceptedJobs] = useState<any[]>([]);
   const [completedJobs, setCompletedJobs] = useState<any[]>([]);
+  const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"available" | "accepted" | "completed">("available");
+  const [activeTab, setActiveTab] = useState<"available" | "accepted" | "completed" | "reviews">("available");
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -68,6 +69,18 @@ export default function ProfessionalDashboard() {
           const unsubscribeCompleted = onSnapshot(completedQuery, (snapshot) => {
             const jobsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             setCompletedJobs(jobsList);
+            
+            // Reviews filter karo (jinme review hai)
+            const reviews = jobsList
+              .filter(job => job.rated && job.review)
+              .sort((a, b) => {
+                const dateA = a.completedAt ? new Date(a.completedAt).getTime() : 0;
+                const dateB = b.completedAt ? new Date(b.completedAt).getTime() : 0;
+                return dateB - dateA;
+              })
+              .slice(0, 10); // Latest 10 reviews
+            setRecentReviews(reviews);
+            
             setLoading(false);
           });
 
@@ -140,7 +153,6 @@ export default function ProfessionalDashboard() {
     }
   };
 
-  // Chat open karna
   const handleOpenChat = async (booking: any) => {
     try {
       await createOrGetChat(
@@ -153,6 +165,18 @@ export default function ProfessionalDashboard() {
       console.error("Error opening chat:", error);
       alert("Failed to open chat");
     }
+  };
+
+  // Rating display ke liye helper function
+  const renderStars = (rating: number) => {
+    return Array.from({ length: 5 }, (_, i) => (
+      <Star 
+        key={i} 
+        size={16} 
+        fill={i < rating ? "#fbbf24" : "none"} 
+        color={i < rating ? "#fbbf24" : "#d1d5db"} 
+      />
+    ));
   };
 
   if (loading) {
@@ -173,6 +197,9 @@ export default function ProfessionalDashboard() {
       </div>
     );
   }
+
+  const averageRating = professionalData?.averageRating || 0;
+  const totalRatings = professionalData?.totalRatings || 0;
 
   return (
     <div style={{ minHeight: "100vh", background: "#fffbeb", padding: "20px", paddingTop: "100px" }}>
@@ -218,7 +245,7 @@ export default function ProfessionalDashboard() {
         </p>
       </div>
 
-      {/* Stats Overview Cards */}
+      {/* Stats Overview Cards - UPDATED WITH RATINGS */}
       <div style={{ 
         display: "grid", 
         gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", 
@@ -264,23 +291,40 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
+        {/* ⭐ NEW: Average Rating Card */}
+        <div style={{
+          background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+          padding: "24px", borderRadius: "16px",
+          boxShadow: "0 4px 12px rgba(251, 191, 36, 0.2)",
+          display: "flex", alignItems: "center", gap: "16px",
+          border: "2px solid #fbbf24"
+        }}>
+          <Star size={32} color="#f59e0b" fill="#fbbf24" />
+          <div>
+            <p style={{ fontSize: "0.85rem", color: "#92400e", margin: 0, fontWeight: "600" }}>Your Rating</p>
+            <p style={{ fontSize: "1.75rem", fontWeight: "800", color: "#92400e", margin: 0 }}>
+              {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
+              {averageRating > 0 && <span style={{ fontSize: "0.9rem", fontWeight: "600" }}>/5</span>}
+            </p>
+          </div>
+        </div>
+
+        {/* ⭐ NEW: Total Reviews Card */}
         <div style={{
           background: "linear-gradient(135deg, #f3e8ff 0%, #e9d5ff 100%)",
           padding: "24px", borderRadius: "16px",
           boxShadow: "0 4px 12px rgba(147, 51, 234, 0.1)",
           display: "flex", alignItems: "center", gap: "16px"
         }}>
-          <DollarSign size={32} color="#9333ea" />
+          <MessageCircle size={32} color="#9333ea" />
           <div>
-            <p style={{ fontSize: "0.85rem", color: "#6b21a8", margin: 0, fontWeight: "600" }}>Total Jobs</p>
-            <p style={{ fontSize: "1.75rem", fontWeight: "800", color: "#6b21a8", margin: 0 }}>
-              {availableJobs.length + acceptedJobs.length + completedJobs.length}
-            </p>
+            <p style={{ fontSize: "0.85rem", color: "#6b21a8", margin: 0, fontWeight: "600" }}>Total Reviews</p>
+            <p style={{ fontSize: "1.75rem", fontWeight: "800", color: "#6b21a8", margin: 0 }}>{totalRatings}</p>
           </div>
         </div>
       </div>
 
-      {/* User Info Cards */}
+      {/* User Info Cards - UPDATED WITH RATING */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))", gap: "20px", marginBottom: "30px" }}>
         <div style={{
           background: "white", padding: "24px", borderRadius: "16px",
@@ -315,31 +359,54 @@ export default function ProfessionalDashboard() {
           </div>
         </div>
 
+        {/* ⭐ NEW: Rating Display Card */}
         <div style={{
-          background: "white", padding: "24px", borderRadius: "16px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.05)", display: "flex", alignItems: "center", gap: "16px"
+          background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)",
+          padding: "24px", borderRadius: "16px",
+          boxShadow: "0 4px 12px rgba(217, 119, 6, 0.1)",
+          display: "flex", alignItems: "center", gap: "16px",
+          border: "2px solid #fbbf24"
         }}>
-          <MapPin size={32} color="#d97706" />
+          <div style={{
+            width: "45px", height: "45px",
+            background: "linear-gradient(135deg, #fbbf24, #f59e0b)",
+            borderRadius: "12px", display: "flex", alignItems: "center", justifyContent: "center"
+          }}>
+            <Star size={24} color="white" fill="white" />
+          </div>
           <div>
-            <p style={{ fontSize: "0.85rem", color: "#6b7280", margin: 0 }}>Location</p>
-            <p style={{ fontSize: "1.1rem", fontWeight: "700", color: "#111827", margin: 0 }}>
-              {professionalData?.location || "Karnal, Haryana"}
-            </p>
+            <p style={{ fontSize: "0.85rem", color: "#92400e", margin: 0, fontWeight: "600" }}>Your Rating</p>
+            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "4px" }}>
+              {averageRating > 0 ? (
+                <>
+                  <div style={{ display: "flex", gap: "2px" }}>
+                    {renderStars(Math.round(averageRating))}
+                  </div>
+                  <span style={{ fontSize: "0.9rem", fontWeight: "700", color: "#92400e" }}>
+                    ({totalRatings} reviews)
+                  </span>
+                </>
+              ) : (
+                <p style={{ fontSize: "0.95rem", fontWeight: "600", color: "#92400e", margin: 0 }}>
+                  No ratings yet
+                </p>
+              )}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Jobs Section with Tabs */}
+      {/* Jobs Section with Tabs - UPDATED WITH REVIEWS TAB */}
       <div style={{
         background: "white", padding: "30px", borderRadius: "20px",
         boxShadow: "0 10px 30px rgba(0,0,0,0.05)"
       }}>
         <h3 style={{ fontSize: "1.5rem", fontWeight: "700", color: "#111827", marginBottom: "20px" }}>
           <Briefcase style={{ display: "inline", marginRight: "8px", verticalAlign: "middle" }} />
-          My Jobs
+          My Jobs & Reviews
         </h3>
 
-        {/* Tab Buttons */}
+        {/* Tab Buttons - WITH REVIEWS TAB */}
         <div style={{ 
           display: "flex", 
           gap: "10px", 
@@ -392,9 +459,29 @@ export default function ProfessionalDashboard() {
           >
             Completed ({completedJobs.length})
           </button>
+          {/* ⭐ NEW: Reviews Tab */}
+          <button
+            onClick={() => setActiveTab("reviews")}
+            style={{
+              padding: "10px 20px",
+              background: activeTab === "reviews" ? "#f59e0b" : "white",
+              color: activeTab === "reviews" ? "white" : "#374151",
+              border: activeTab === "reviews" ? "2px solid #f59e0b" : "2px solid #e5e7eb",
+              borderRadius: "10px",
+              fontWeight: "700",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+              display: "flex",
+              alignItems: "center",
+              gap: "6px"
+            }}
+          >
+            <Star size={16} fill={activeTab === "reviews" ? "white" : "none"} />
+            Reviews ({totalRatings})
+          </button>
         </div>
 
-        {/* Available Jobs - NO WHATSAPP */}
+        {/* Available Jobs */}
         {activeTab === "available" && (
           <>
             {availableJobs.length === 0 ? (
@@ -446,7 +533,6 @@ export default function ProfessionalDashboard() {
                       </span>
                     </div>
 
-                    {/* Action Buttons - ONLY Accept & Reject (No WhatsApp) */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                       <button 
                         onClick={() => handleAcceptJob(booking.id)}
@@ -476,7 +562,7 @@ export default function ProfessionalDashboard() {
           </>
         )}
 
-        {/* Accepted Jobs - NO WHATSAPP, Added Emergency Call */}
+        {/* Accepted Jobs */}
         {activeTab === "accepted" && (
           <>
             {acceptedJobs.length === 0 ? (
@@ -528,7 +614,6 @@ export default function ProfessionalDashboard() {
                       </span>
                     </div>
 
-                    {/* Action Buttons - Chat, Mark Complete, Emergency Call (NO WhatsApp) */}
                     <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                       <button 
                         onClick={() => handleOpenChat(booking)}
@@ -559,7 +644,7 @@ export default function ProfessionalDashboard() {
                             padding: "10px", borderRadius: "8px", textDecoration: "none", fontWeight: "600", fontSize: "0.9rem"
                           }}
                         >
-                          <Phone size={16} /> Emergency Call
+                          <Phone size={16} /> Call
                         </a>
                       )}
                     </div>
@@ -620,6 +705,134 @@ export default function ProfessionalDashboard() {
                       <span style={{ display: "flex", alignItems: "center", gap: "8px" }}>
                         <MapPin size={16} color="#2563eb" /> {booking.address}
                       </span>
+                    </div>
+
+                    {/* ⭐ Show rating if customer has rated */}
+                    {booking.rated && booking.rating && (
+                      <div style={{
+                        marginTop: "10px",
+                        padding: "12px",
+                        background: "#fef3c7",
+                        borderRadius: "8px",
+                        border: "1px solid #fbbf24"
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "6px" }}>
+                          <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#92400e" }}>Customer Rating:</span>
+                          <div style={{ display: "flex", gap: "2px" }}>
+                            {renderStars(booking.rating)}
+                          </div>
+                          <span style={{ fontSize: "0.85rem", fontWeight: "700", color: "#92400e" }}>
+                            ({booking.rating}/5)
+                          </span>
+                        </div>
+                        {booking.review && (
+                          <p style={{ margin: 0, fontSize: "0.9rem", color: "#78350f", fontStyle: "italic" }}>
+                            "{booking.review}"
+                          </p>
+                        )}
+                      </div>
+                    )}
+
+                    {!booking.rated && (
+                      <p style={{ margin: "10px 0 0 0", fontSize: "0.85rem", color: "#6b7280", fontStyle: "italic" }}>
+                        ⏳ Waiting for customer rating...
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* ⭐ NEW: Reviews Tab */}
+        {activeTab === "reviews" && (
+          <>
+            {recentReviews.length === 0 ? (
+              <div style={{
+                padding: "40px", textAlign: "center", background: "#f9fafb",
+                borderRadius: "12px", border: "2px dashed #e5e7eb"
+              }}>
+                <Star size={48} color="#fbbf24" style={{ margin: "0 auto 16px", display: "block" }} />
+                <p style={{ color: "#6b7280", fontSize: "1rem", fontWeight: "600" }}>
+                  No reviews yet
+                </p>
+                <p style={{ color: "#9ca3af", fontSize: "0.9rem", margin: "8px 0 0 0" }}>
+                  Complete more jobs to receive reviews from customers!
+                </p>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gap: "16px" }}>
+                {/* Overall Rating Summary */}
+                <div style={{
+                  background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+                  padding: "24px", borderRadius: "16px",
+                  border: "2px solid #fbbf24",
+                  display: "flex", alignItems: "center", justifyContent: "space-around",
+                  flexWrap: "wrap", gap: "20px"
+                }}>
+                  <div style={{ textAlign: "center" }}>
+                    <p style={{ fontSize: "3rem", fontWeight: "800", color: "#92400e", margin: 0 }}>
+                      {averageRating > 0 ? averageRating.toFixed(1) : "N/A"}
+                    </p>
+                    <div style={{ display: "flex", gap: "4px", justifyContent: "center", margin: "8px 0" }}>
+                      {averageRating > 0 && renderStars(Math.round(averageRating))}
+                    </div>
+                    <p style={{ fontSize: "0.9rem", color: "#92400e", margin: 0, fontWeight: "600" }}>
+                      Based on {totalRatings} reviews
+                    </p>
+                  </div>
+                </div>
+
+                {/* Individual Reviews */}
+                {recentReviews.map((review) => (
+                  <div key={review.id} style={{
+                    background: "white", padding: "20px", borderRadius: "12px",
+                    border: "1px solid #e5e7eb", boxShadow: "0 2px 4px rgba(0,0,0,0.05)"
+                  }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start", marginBottom: "12px", flexWrap: "wrap", gap: "10px" }}>
+                      <div>
+                        <h4 style={{ fontSize: "1.1rem", fontWeight: "700", color: "#111827", margin: 0 }}>
+                          {review.serviceType}
+                        </h4>
+                        <p style={{ fontSize: "0.85rem", color: "#6b7280", margin: "4px 0 0 0" }}>
+                          Customer: {review.customerName || "Verified Customer"}
+                        </p>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                        <div style={{ display: "flex", gap: "2px" }}>
+                          {renderStars(review.rating)}
+                        </div>
+                        <span style={{ fontSize: "0.9rem", fontWeight: "700", color: "#92400e" }}>
+                          {review.rating}/5
+                        </span>
+                      </div>
+                    </div>
+
+                    {review.review && (
+                      <p style={{ 
+                        margin: "10px 0", 
+                        fontSize: "0.95rem", 
+                        color: "#374151", 
+                        lineHeight: 1.5,
+                        background: "#f9fafb",
+                        padding: "12px",
+                        borderRadius: "8px",
+                        borderLeft: "4px solid #fbbf24"
+                      }}>
+                        "{review.review}"
+                      </p>
+                    )}
+
+                    <div style={{ display: "flex", gap: "16px", color: "#9ca3af", fontSize: "0.8rem", marginTop: "10px" }}>
+                      <span style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                        <Calendar size={12} /> {review.date}
+                      </span>
+                      {review.completedAt && (
+                        <span>
+                          Completed: {new Date(review.completedAt).toLocaleDateString("en-IN")}
+                        </span>
+                      )}
                     </div>
                   </div>
                 ))}
