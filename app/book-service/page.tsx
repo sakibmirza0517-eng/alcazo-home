@@ -6,6 +6,7 @@ import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { Calendar, Clock, MapPin, Phone, FileText, ArrowLeft, Hammer } from "lucide-react";
+import LocationPicker from "@/components/LocationPicker";
 
 export default function BookServicePage() {
   const router = useRouter();
@@ -20,6 +21,11 @@ export default function BookServicePage() {
   const [timeSlot, setTimeSlot] = useState("10:00 AM - 11:00 AM");
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
+  
+  // ⭐ NEW: Location States
+  const [latitude, setLatitude] = useState<number | null>(null);
+  const [longitude, setLongitude] = useState<number | null>(null);
+  const [locationSelected, setLocationSelected] = useState(false);
 
   // Check if user is logged in
   useEffect(() => {
@@ -38,9 +44,24 @@ export default function BookServicePage() {
     return () => unsubscribe();
   }, [router]);
 
+  // ⭐ NEW: Handle location selection from map
+  const handleLocationSelect = (lat: number, lng: number, addr: string) => {
+    setLatitude(lat);
+    setLongitude(lng);
+    setAddress(addr);
+    setLocationSelected(true);
+  };
+
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     if (!user) return;
+    
+    // ⭐ NEW: Validate location
+    if (!locationSelected || latitude === null || longitude === null) {
+      alert("❌ Please select your location on the map!");
+      return;
+    }
+    
     setLoading(true);
 
     try {
@@ -54,15 +75,23 @@ export default function BookServicePage() {
         timeSlot: timeSlot,
         address: address,
         phone: phone,
+        
+        // ⭐ NEW: Location Data
+        location: {
+          latitude: latitude,
+          longitude: longitude,
+          address: address
+        },
+        
         status: "pending",
         
-        // ⭐ NEW: Tracking System
+        // Tracking System
         trackingStatus: "pending",
         trackingHistory: [
           {
             status: "pending",
             label: "Booking Created",
-            timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
+            timestamp: new Date().toISOString(),
             note: "Your booking has been received"
           }
         ],
@@ -193,18 +222,11 @@ export default function BookServicePage() {
             </div>
           </div>
 
-          {/* Address */}
-          <div>
-            <label style={labelStyle}>Address</label>
-            <input 
-              type="text" 
-              placeholder="Enter your full address"
-              value={address}
-              onChange={(e) => setAddress(e.target.value)}
-              required
-              style={inputStyle}
-            />
-          </div>
+          {/* ⭐ NEW: Location Picker (Replaces old address input) */}
+          <LocationPicker 
+            onLocationSelect={handleLocationSelect}
+            initialAddress={address}
+          />
 
           {/* Phone Number */}
           <div>
@@ -222,13 +244,14 @@ export default function BookServicePage() {
           {/* Submit Button */}
           <button 
             type="submit" 
-            disabled={loading}
+            disabled={loading || !locationSelected}
             style={{
               background: "linear-gradient(135deg, #d97706, #b45309)",
               color: "white", padding: "16px", borderRadius: "12px",
               border: "none", fontWeight: "700", fontSize: "1.1rem",
-              cursor: "pointer", boxShadow: "0 8px 20px rgba(217, 119, 6, 0.3)",
-              opacity: loading ? 0.7 : 1, marginTop: "10px"
+              cursor: loading || !locationSelected ? "not-allowed" : "pointer", 
+              boxShadow: "0 8px 20px rgba(217, 119, 6, 0.3)",
+              opacity: loading || !locationSelected ? 0.7 : 1, marginTop: "10px"
             }}
           >
             {loading ? "Booking..." : "Confirm Booking"}
