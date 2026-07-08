@@ -62,7 +62,7 @@ export default function BookServicePage() {
           {
             status: "pending",
             label: "Booking Created",
-            timestamp: serverTimestamp(),
+            timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
             note: "Your booking has been received"
           }
         ],

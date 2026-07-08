@@ -2,9 +2,9 @@ import { db } from "./firebase";
 import { doc, updateDoc, arrayUnion, serverTimestamp } from "firebase/firestore";
 
 // Tracking status types
-export type TrackingStatus = 
+export type TrackingStatus =
   | "pending"
-  | "accepted" 
+  | "accepted"
   | "on_the_way"
   | "arrived"
   | "working"
@@ -31,7 +31,7 @@ export const updateTrackingStatus = async (
   try {
     const statusEntry = {
       status: newStatus,
-      timestamp: serverTimestamp(),
+      timestamp: new Date().toISOString(),  // ✅ YE SAHI HAI
       note: note || "",
       label: statusInfo[newStatus].label
     };
@@ -59,12 +59,12 @@ export const getNextStatus = (currentStatus: TrackingStatus): TrackingStatus | n
     "working",
     "completed"
   ];
-  
+
   const currentIndex = flow.indexOf(currentStatus);
   if (currentIndex === -1 || currentIndex === flow.length - 1) {
     return null; // No next status or already at end
   }
-  
+
   return flow[currentIndex + 1];
 };
 
@@ -72,44 +72,44 @@ export const getNextStatus = (currentStatus: TrackingStatus): TrackingStatus | n
 export const getActionButton = (currentStatus: TrackingStatus) => {
   const actions: Record<TrackingStatus, { label: string; nextStatus: TrackingStatus; icon: string; color: string } | null> = {
     pending: null,
-    accepted: { 
-      label: "Start Travel", 
-      nextStatus: "on_the_way", 
+    accepted: {
+      label: "Start Travel",
+      nextStatus: "on_the_way",
       icon: "🚗",
       color: "#2563eb"
     },
-    on_the_way: { 
-      label: "Mark Arrived", 
-      nextStatus: "arrived", 
+    on_the_way: {
+      label: "Mark Arrived",
+      nextStatus: "arrived",
       icon: "📍",
       color: "#9333ea"
     },
-    arrived: { 
-      label: "Start Work", 
-      nextStatus: "working", 
+    arrived: {
+      label: "Start Work",
+      nextStatus: "working",
       icon: "🔧",
       color: "#ea580c"
     },
-    working: { 
-      label: "Complete Job", 
-      nextStatus: "completed", 
+    working: {
+      label: "Complete Job",
+      nextStatus: "completed",
       icon: "✅",
       color: "#16a34a"
     },
     completed: null,
     cancelled: null
   };
-  
+
   return actions[currentStatus];
 };
 
 // Calculate ETA (Estimated Time of Arrival)
 export const calculateETA = (distanceKm: number, speedKmph: number = 30): string => {
   const timeMinutes = Math.round((distanceKm / speedKmph) * 60);
-  
+
   if (timeMinutes < 1) return "Less than 1 min";
   if (timeMinutes < 60) return `${timeMinutes} min`;
-  
+
   const hours = Math.floor(timeMinutes / 60);
   const mins = timeMinutes % 60;
   return `${hours} hr ${mins} min`;
@@ -126,6 +126,6 @@ export const getStatusProgress = (status: TrackingStatus): number => {
     completed: 100,
     cancelled: 0
   };
-  
+
   return progress[status];
 };

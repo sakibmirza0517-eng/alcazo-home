@@ -117,7 +117,7 @@ export default function ProfessionalDashboard() {
         trackingHistory: arrayUnion({
           status: "accepted",
           label: "Professional Assigned",
-          timestamp: serverTimestamp(),
+          timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
           note: `${userData?.name} accepted the job`
         }),
         acceptedAt: new Date().toISOString()
@@ -155,7 +155,7 @@ export default function ProfessionalDashboard() {
         trackingHistory: arrayUnion({
           status: "completed",
           label: "Service Completed",
-          timestamp: serverTimestamp(),
+          timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
           note: "Service has been completed"
         }),
         completedAt: new Date().toISOString()
@@ -187,7 +187,7 @@ export default function ProfessionalDashboard() {
         trackingHistory: arrayUnion({
           status: action.nextStatus,
           label: statusInfo[action.nextStatus].label,
-          timestamp: serverTimestamp(),
+          timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
           note: `Status updated to ${statusInfo[action.nextStatus].label}`
         }),
         // Agar completed hai toh status bhi update karo
