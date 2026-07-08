@@ -24,6 +24,7 @@ export default function ProfessionalDashboard() {
   
   // ⭐ NEW: Professional's current location
   const [professionalLocation, setProfessionalLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [settingLocation, setSettingLocation] = useState(false);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -115,6 +116,48 @@ export default function ProfessionalDashboard() {
   const handleLogout = async () => {
     await signOut(auth);
     router.push("/");
+  };
+
+  // ⭐ NEW: Set Professional Location
+  const handleSetMyLocation = async () => {
+    if (!auth.currentUser) return;
+    
+    setSettingLocation(true);
+    
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        async (pos) => {
+          try {
+            await updateDoc(doc(db, "professionals", auth.currentUser!.uid), {
+              location: {
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                updatedAt: new Date().toISOString()
+              }
+            });
+            
+            setProfessionalLocation({
+              lat: pos.coords.latitude,
+              lng: pos.coords.longitude
+            });
+            
+            alert("✅ Location set successfully!");
+            setSettingLocation(false);
+          } catch (error) {
+            console.error("Error setting location:", error);
+            alert("❌ Error setting location");
+            setSettingLocation(false);
+          }
+        },
+        (err) => {
+          alert("❌ Location access denied. Please enable GPS.");
+          setSettingLocation(false);
+        }
+      );
+    } else {
+      alert("❌ Geolocation not supported");
+      setSettingLocation(false);
+    }
   };
 
   const handleAcceptJob = async (bookingId: string) => {
@@ -253,6 +296,69 @@ export default function ProfessionalDashboard() {
     ));
   };
 
+  // ⭐ NEW: Distance Card Component
+  const DistanceCard = ({ booking }: { booking: any }) => {
+    if (!professionalLocation || !booking.location?.latitude || !booking.location?.longitude) {
+      return null;
+    }
+
+    const distance = calculateDistance(
+      professionalLocation.lat,
+      professionalLocation.lng,
+      booking.location.latitude,
+      booking.location.longitude
+    );
+
+    const eta = calculateETA(distance);
+
+    return (
+      <div style={{
+        background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
+        padding: "12px",
+        borderRadius: "8px",
+        marginTop: "10px",
+        border: "1px solid #3b82f6",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "10px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Navigation size={20} color="#2563eb" />
+          <div>
+            <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: "700", color: "#1e40af" }}>
+              {formatDistance(distance)} away
+            </p>
+            <p style={{ margin: 0, fontSize: "0.75rem", color: "#3b82f6" }}>
+              ETA: {eta}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => handleNavigate(booking)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "#2563eb",
+            color: "white",
+            border: "none",
+            padding: "8px 14px",
+            borderRadius: "8px",
+            fontWeight: "600",
+            fontSize: "0.85rem",
+            cursor: "pointer",
+            textDecoration: "none"
+          }}
+        >
+          <ExternalLink size={14} />
+          Navigate
+        </button>
+      </div>
+    );
+  };
+
   const MiniTrackingTimeline = ({ booking }: { booking: any }) => {
     const currentStatus: TrackingStatus = booking.trackingStatus || "accepted";
     const steps: TrackingStatus[] = ["accepted", "on_the_way", "arrived", "working", "completed"];
@@ -328,69 +434,6 @@ export default function ProfessionalDashboard() {
     );
   };
 
-  // ⭐ NEW: Distance Card Component
-  const DistanceCard = ({ booking }: { booking: any }) => {
-    if (!professionalLocation || !booking.location?.latitude || !booking.location?.longitude) {
-      return null;
-    }
-
-    const distance = calculateDistance(
-      professionalLocation.lat,
-      professionalLocation.lng,
-      booking.location.latitude,
-      booking.location.longitude
-    );
-
-    const eta = calculateETA(distance);
-
-    return (
-      <div style={{
-        background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
-        padding: "12px",
-        borderRadius: "8px",
-        marginTop: "10px",
-        border: "1px solid #3b82f6",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        flexWrap: "wrap",
-        gap: "10px"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          <Navigation size={20} color="#2563eb" />
-          <div>
-            <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: "700", color: "#1e40af" }}>
-              {formatDistance(distance)} away
-            </p>
-            <p style={{ margin: 0, fontSize: "0.75rem", color: "#3b82f6" }}>
-              ETA: {eta}
-            </p>
-          </div>
-        </div>
-        <button
-          onClick={() => handleNavigate(booking)}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "6px",
-            background: "#2563eb",
-            color: "white",
-            border: "none",
-            padding: "8px 14px",
-            borderRadius: "8px",
-            fontWeight: "600",
-            fontSize: "0.85rem",
-            cursor: "pointer",
-            textDecoration: "none"
-          }}
-        >
-          <ExternalLink size={14} />
-          Navigate
-        </button>
-      </div>
-    );
-  };
-
   if (loading) {
     return (
       <div style={{ 
@@ -456,6 +499,77 @@ export default function ProfessionalDashboard() {
           Manage your services and connect with customers.
         </p>
       </div>
+
+      {/* ⭐ NEW: Location Set Section */}
+      {!professionalLocation && (
+        <div style={{
+          background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)",
+          padding: "20px",
+          borderRadius: "16px",
+          marginBottom: "30px",
+          border: "2px solid #f59e0b",
+          textAlign: "center"
+        }}>
+          <p style={{ margin: "0 0 12px 0", color: "#92400e", fontWeight: "600" }}>
+            📍 Set your location to see distance to customers
+          </p>
+          <button
+            onClick={handleSetMyLocation}
+            disabled={settingLocation}
+            style={{
+              background: settingLocation ? "#e5e7eb" : "linear-gradient(135deg, #f59e0b, #d97706)",
+              color: "white",
+              border: "none",
+              padding: "12px 24px",
+              borderRadius: "10px",
+              fontWeight: "700",
+              fontSize: "1rem",
+              cursor: settingLocation ? "not-allowed" : "pointer",
+              boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)"
+            }}
+          >
+            {settingLocation ? "Setting Location..." : "📍 Set My Current Location"}
+          </button>
+        </div>
+      )}
+
+      {professionalLocation && (
+        <div style={{
+          background: "linear-gradient(135deg, #dcfce7 0%, #bbf7d0 100%)",
+          padding: "16px",
+          borderRadius: "12px",
+          marginBottom: "30px",
+          border: "2px solid #16a34a",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "10px"
+        }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+            <MapPin size={20} color="#16a34a" />
+            <p style={{ margin: 0, color: "#166534", fontWeight: "600" }}>
+              ✅ Your location is set
+            </p>
+          </div>
+          <button
+            onClick={handleSetMyLocation}
+            disabled={settingLocation}
+            style={{
+              background: "white",
+              color: "#16a34a",
+              border: "2px solid #16a34a",
+              padding: "8px 16px",
+              borderRadius: "8px",
+              fontWeight: "600",
+              fontSize: "0.85rem",
+              cursor: "pointer"
+            }}
+          >
+            Update Location
+          </button>
+        </div>
+      )}
 
       {/* Stats Overview Cards */}
       <div style={{ 
