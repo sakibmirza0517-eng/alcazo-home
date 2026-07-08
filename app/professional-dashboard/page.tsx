@@ -6,9 +6,10 @@ import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, collection, query, where, onSnapshot, updateDoc, getDocs, serverTimestamp, arrayUnion } from "firebase/firestore";
 import { signOut } from "firebase/auth";
 import Link from "next/link";
-import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare, Star, MessageCircle, Navigation, Truck, Wrench, CheckCircle2, Play, PlayCircle } from "lucide-react";
+import { Hammer, LogOut, Briefcase, User, Phone, Mail, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Check, DollarSign, MessageSquare, Star, MessageCircle, Navigation, Truck, Wrench, CheckCircle2, Play, PlayCircle, ExternalLink } from "lucide-react";
 import { createOrGetChat } from "@/lib/chat";
 import { statusInfo, TrackingStatus, getActionButton, getStatusProgress } from "@/lib/tracking";
+import { calculateDistance, getNavigationUrl, formatDistance, calculateETA } from "@/lib/location";
 
 export default function ProfessionalDashboard() {
   const router = useRouter();
@@ -20,6 +21,9 @@ export default function ProfessionalDashboard() {
   const [recentReviews, setRecentReviews] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"available" | "accepted" | "completed" | "reviews">("available");
+  
+  // ⭐ NEW: Professional's current location
+  const [professionalLocation, setProfessionalLocation] = useState<{lat: number, lng: number} | null>(null);
 
   useEffect(() => {
     const checkAuth = async () => {
@@ -37,7 +41,16 @@ export default function ProfessionalDashboard() {
 
           const proDoc = await getDoc(doc(db, "professionals", user.uid));
           if (proDoc.exists()) {
-            setProfessionalData(proDoc.data());
+            const proData = proDoc.data();
+            setProfessionalData(proData);
+            
+            // ⭐ NEW: Get professional's location if available
+            if (proData.location?.latitude && proData.location?.longitude) {
+              setProfessionalLocation({
+                lat: proData.location.latitude,
+                lng: proData.location.longitude
+              });
+            }
           }
 
           const serviceType = data.service;
@@ -117,7 +130,7 @@ export default function ProfessionalDashboard() {
         trackingHistory: arrayUnion({
           status: "accepted",
           label: "Professional Assigned",
-          timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
+          timestamp: new Date().toISOString(),
           note: `${userData?.name} accepted the job`
         }),
         acceptedAt: new Date().toISOString()
@@ -155,7 +168,7 @@ export default function ProfessionalDashboard() {
         trackingHistory: arrayUnion({
           status: "completed",
           label: "Service Completed",
-          timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
+          timestamp: new Date().toISOString(),
           note: "Service has been completed"
         }),
         completedAt: new Date().toISOString()
@@ -167,7 +180,6 @@ export default function ProfessionalDashboard() {
     }
   };
 
-  // ⭐ NEW: Update Tracking Status Function
   const handleUpdateTracking = async (bookingId: string, currentStatus: TrackingStatus) => {
     const action = getActionButton(currentStatus);
     if (!action) return;
@@ -187,10 +199,9 @@ export default function ProfessionalDashboard() {
         trackingHistory: arrayUnion({
           status: action.nextStatus,
           label: statusInfo[action.nextStatus].label,
-          timestamp: new Date().toISOString(), // ✅ FIXED: serverTimestamp() hata diya
+          timestamp: new Date().toISOString(),
           note: `Status updated to ${statusInfo[action.nextStatus].label}`
         }),
-        // Agar completed hai toh status bhi update karo
         ...(action.nextStatus === "completed" ? {
           status: "completed",
           completedAt: new Date().toISOString()
@@ -217,6 +228,20 @@ export default function ProfessionalDashboard() {
     }
   };
 
+  // ⭐ NEW: Navigate to customer location
+  const handleNavigate = (booking: any) => {
+    if (booking.location?.latitude && booking.location?.longitude) {
+      const url = getNavigationUrl(
+        booking.location.latitude,
+        booking.location.longitude,
+        booking.location.address
+      );
+      window.open(url, '_blank');
+    } else {
+      alert("❌ Customer location not available");
+    }
+  };
+
   const renderStars = (rating: number) => {
     return Array.from({ length: 5 }, (_, i) => (
       <Star 
@@ -228,7 +253,6 @@ export default function ProfessionalDashboard() {
     ));
   };
 
-  // ⭐ NEW: Mini Timeline Component for Professional
   const MiniTrackingTimeline = ({ booking }: { booking: any }) => {
     const currentStatus: TrackingStatus = booking.trackingStatus || "accepted";
     const steps: TrackingStatus[] = ["accepted", "on_the_way", "arrived", "working", "completed"];
@@ -300,6 +324,69 @@ export default function ProfessionalDashboard() {
         }}>
           {statusInfo[currentStatus].icon} {statusInfo[currentStatus].label}
         </p>
+      </div>
+    );
+  };
+
+  // ⭐ NEW: Distance Card Component
+  const DistanceCard = ({ booking }: { booking: any }) => {
+    if (!professionalLocation || !booking.location?.latitude || !booking.location?.longitude) {
+      return null;
+    }
+
+    const distance = calculateDistance(
+      professionalLocation.lat,
+      professionalLocation.lng,
+      booking.location.latitude,
+      booking.location.longitude
+    );
+
+    const eta = calculateETA(distance);
+
+    return (
+      <div style={{
+        background: "linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%)",
+        padding: "12px",
+        borderRadius: "8px",
+        marginTop: "10px",
+        border: "1px solid #3b82f6",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        flexWrap: "wrap",
+        gap: "10px"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+          <Navigation size={20} color="#2563eb" />
+          <div>
+            <p style={{ margin: 0, fontSize: "0.85rem", fontWeight: "700", color: "#1e40af" }}>
+              {formatDistance(distance)} away
+            </p>
+            <p style={{ margin: 0, fontSize: "0.75rem", color: "#3b82f6" }}>
+              ETA: {eta}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => handleNavigate(booking)}
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "6px",
+            background: "#2563eb",
+            color: "white",
+            border: "none",
+            padding: "8px 14px",
+            borderRadius: "8px",
+            fontWeight: "600",
+            fontSize: "0.85rem",
+            cursor: "pointer",
+            textDecoration: "none"
+          }}
+        >
+          <ExternalLink size={14} />
+          Navigate
+        </button>
       </div>
     );
   };
@@ -683,7 +770,7 @@ export default function ProfessionalDashboard() {
           </>
         )}
 
-        {/* ⭐ UPDATED: Accepted Jobs with Tracking */}
+        {/* Accepted Jobs with Distance & Navigation */}
         {activeTab === "accepted" && (
           <>
             {acceptedJobs.length === 0 ? (
@@ -716,7 +803,6 @@ export default function ProfessionalDashboard() {
                             Customer: {booking.customerName || booking.phone}
                           </p>
                         </div>
-                        {/* ⭐ NEW: Tracking Status Badge */}
                         <div style={{
                           padding: "4px 10px", borderRadius: "20px", fontSize: "0.75rem", fontWeight: "600",
                           background: info.color + "20", color: info.color,
@@ -743,10 +829,11 @@ export default function ProfessionalDashboard() {
                         </span>
                       </div>
 
-                      {/* ⭐ NEW: Mini Tracking Timeline */}
+                      {/* ⭐ NEW: Distance Card with Navigate Button */}
+                      <DistanceCard booking={booking} />
+
                       <MiniTrackingTimeline booking={booking} />
 
-                      {/* ⭐ NEW: Dynamic Action Button */}
                       {action && (
                         <button 
                           onClick={() => handleUpdateTracking(booking.id, currentStatus)}
@@ -766,7 +853,6 @@ export default function ProfessionalDashboard() {
                         </button>
                       )}
 
-                      {/* Other Action Buttons */}
                       <div style={{ display: "flex", gap: "10px", marginTop: "10px", flexWrap: "wrap" }}>
                         <button 
                           onClick={() => handleOpenChat(booking)}
@@ -851,7 +937,6 @@ export default function ProfessionalDashboard() {
                       </span>
                     </div>
 
-                    {/* ⭐ Show rating if customer has rated */}
                     {booking.rated && booking.rating && (
                       <div style={{
                         marginTop: "10px",

@@ -6,7 +6,16 @@ import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
 import { Calendar, Clock, MapPin, Phone, FileText, ArrowLeft, Hammer } from "lucide-react";
-import LocationPicker from "@/components/LocationPicker";
+import dynamic from "next/dynamic";
+
+// ⭐ Dynamic Import with SSR disabled
+const LocationPicker = dynamic(
+  () => import("@/components/LocationPicker"),
+  { 
+    ssr: false,
+    loading: () => <p>Loading map...</p>
+  }
+);
 
 export default function BookServicePage() {
   const router = useRouter();
