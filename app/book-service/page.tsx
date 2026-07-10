@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { Calendar, Clock, MapPin, Phone, FileText, ArrowLeft, Hammer } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, FileText, ArrowLeft, Hammer, User as UserIcon } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // ⭐ Dynamic Import with SSR disabled
@@ -13,15 +13,19 @@ const LocationPicker = dynamic(
   () => import("@/components/LocationPicker"),
   { 
     ssr: false,
-    loading: () => <p>Loading map...</p>
+    loading: () => <p style={{ padding: "20px", textAlign: "center", color: "#6b7280" }}>Loading map...</p>
   }
 );
 
 export default function BookServicePage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const professionalId = searchParams.get('professionalId');
+  
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [customerName, setCustomerName] = useState("");
+  const [professional, setProfessional] = useState<any>(null);
 
   // Form States
   const [serviceType, setServiceType] = useState("Carpenter");
@@ -31,12 +35,12 @@ export default function BookServicePage() {
   const [address, setAddress] = useState("");
   const [phone, setPhone] = useState("");
   
-  // ⭐ NEW: Location States
+  // ⭐ Location States
   const [latitude, setLatitude] = useState<number | null>(null);
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationSelected, setLocationSelected] = useState(false);
 
-  // Check if user is logged in
+  // Check if user is logged in & fetch professional if provided
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
@@ -46,14 +50,33 @@ export default function BookServicePage() {
         // Fetch customer name
         const userDoc = await getDoc(doc(db, "users", currentUser.uid));
         if (userDoc.exists()) {
-          setCustomerName(userDoc.data().name || "");
+          const userData = userDoc.data();
+          setCustomerName(userData.name || "");
+          setPhone(userData.phone || "");
+        }
+
+        // ✅ NEW: Fetch professional details if professionalId is in URL
+        if (professionalId) {
+          try {
+            const profDoc = await getDoc(doc(db, "professionals", professionalId));
+            if (profDoc.exists()) {
+              const profData = { id: profDoc.id, ...profDoc.data() };
+              setProfessional(profData);
+              // Auto-set service type from professional's category
+              if (profData.category) {
+                setServiceType(profData.category);
+              }
+            }
+          } catch (error) {
+            console.error("Error fetching professional:", error);
+          }
         }
       }
     });
     return () => unsubscribe();
-  }, [router]);
+  }, [router, professionalId]);
 
-  // ⭐ NEW: Handle location selection from map
+  // ⭐ Handle location selection from map
   const handleLocationSelect = (lat: number, lng: number, addr: string) => {
     setLatitude(lat);
     setLongitude(lng);
@@ -65,7 +88,7 @@ export default function BookServicePage() {
     e.preventDefault();
     if (!user) return;
     
-    // ⭐ NEW: Validate location
+    // ⭐ Validate location
     if (!locationSelected || latitude === null || longitude === null) {
       alert("❌ Please select your location on the map!");
       return;
@@ -74,18 +97,23 @@ export default function BookServicePage() {
     setLoading(true);
 
     try {
-      // Save booking to Firebase Firestore with tracking initialized
-      await addDoc(collection(db, "bookings"), {
+      // ✅ FIXED: serviceType ko properly handle karo
+      const bookingData = {
         customerId: user.uid,
         customerName: customerName,
-        serviceType: serviceType,
+        serviceType: serviceType || "Not specified", // ✅ Undefined protection
+        
+        // ✅ NEW: Professional details if selected
+        professionalId: professionalId || null,
+        professionalName: professional?.name || null,
+        
         description: description,
         date: date,
         timeSlot: timeSlot,
         address: address,
         phone: phone,
         
-        // ⭐ NEW: Location Data
+        // ⭐ Location Data
         location: {
           latitude: latitude,
           longitude: longitude,
@@ -107,12 +135,18 @@ export default function BookServicePage() {
         
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
-      });
+      };
+
+      console.log("📝 Creating booking:", bookingData);
+
+      const bookingRef = await addDoc(collection(db, "bookings"), bookingData);
+
+      console.log("✅ Booking created:", bookingRef.id);
 
       alert("✅ Booking Successful! A professional will contact you soon.");
       router.push("/dashboard");
     } catch (error: any) {
-      console.error(error);
+      console.error("Booking error:", error);
       alert("❌ Error: " + error.message);
     } finally {
       setLoading(false);
@@ -168,12 +202,50 @@ export default function BookServicePage() {
             <Hammer size={32} color="white" />
           </div>
           <h1 style={{ fontSize: "2rem", fontWeight: "800", color: "#111827", marginBottom: "8px" }}>
-            Book a Service
+            {professional ? `Book ${professional.name}` : "Book a Service"}
           </h1>
           <p style={{ color: "#6b7280", fontSize: "1rem" }}>
-            Fill the details and we'll send a professional to you.
+            {professional 
+              ? `${professional.category} • ${professional.location || "Service"}`
+              : "Fill the details and we'll send a professional to you."}
           </p>
         </div>
+
+        {/* ✅ Professional Info Card (if selected) */}
+        {professional && (
+          <div style={{
+            background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+            padding: "16px",
+            borderRadius: "12px",
+            marginBottom: "24px",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px"
+          }}>
+            <div style={{
+              width: "48px",
+              height: "48px",
+              borderRadius: "50%",
+              background: "linear-gradient(135deg, #d97706, #b45309)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              color: "white",
+              fontWeight: "700",
+              fontSize: "1.2rem"
+            }}>
+              {professional.name?.charAt(0).toUpperCase() || "P"}
+            </div>
+            <div style={{ flex: 1 }}>
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: "700", color: "#111827" }}>
+                {professional.name}
+              </h3>
+              <p style={{ margin: "2px 0 0", fontSize: "0.9rem", color: "#6b7280" }}>
+                {professional.category} • {professional.phone || "N/A"}
+              </p>
+            </div>
+          </div>
+        )}
 
         {/* Form */}
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -231,7 +303,7 @@ export default function BookServicePage() {
             </div>
           </div>
 
-          {/* ⭐ NEW: Location Picker (Replaces old address input) */}
+          {/* ⭐ Location Picker */}
           <LocationPicker 
             onLocationSelect={handleLocationSelect}
             initialAddress={address}

@@ -1,125 +1,182 @@
 import { db } from "./firebase";
-import { 
-  collection, 
-  doc, 
-  addDoc, 
-  query, 
-  where, 
-  orderBy, 
-  onSnapshot, 
-  updateDoc, 
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  where,
+  addDoc,
   serverTimestamp,
-  getDocs
+  onSnapshot,
+  orderBy,
+  updateDoc,
+  setDoc,
 } from "firebase/firestore";
 
-// Chat room create karna (agar nahi hai toh)
-export const createOrGetChat = async (bookingId: string, customerUid: string, professionalUid: string) => {
+export interface ChatMessage {
+  id: string;
+  text: string;
+  imageUrl: string | null;
+  senderId: string;
+  isSystem?: boolean;
+  timestamp: any;
+  read: boolean;
+}
+
+export const createOrGetChat = async (
+  bookingId: string,
+  customerId: string,
+  professionalId: string
+): Promise<string> => {
   try {
-    // Check if chat already exists
-    const chatQuery = query(collection(db, "chats"), where("bookingId", "==", bookingId));
-    const chatSnapshot = await getDocs(chatQuery);
-    
-    if (!chatSnapshot.empty) {
-      // Chat already exists
-      return chatSnapshot.docs[0].id;
+    const chatsRef = collection(db, "chats");
+    const q = query(chatsRef, where("bookingId", "==", bookingId));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      return querySnapshot.docs[0].id;
     }
-    
-    // Create new chat
-    const chatRef = await addDoc(collection(db, "chats"), {
-      bookingId: bookingId,
-      participants: [customerUid, professionalUid],
+
+    const newChatRef = doc(chatsRef);
+    await setDoc(newChatRef, {
+      bookingId,
+      customerId,
+      professionalId,
+      createdAt: serverTimestamp(),
       lastMessage: "",
       lastMessageTime: serverTimestamp(),
-      createdAt: serverTimestamp()
+      typing: {},
+      typingTime: {},
     });
-    
-    return chatRef.id;
+
+    return newChatRef.id;
   } catch (error) {
-    console.error("Error creating chat:", error);
+    console.error("Error creating/getting chat:", error);
     throw error;
   }
 };
 
-// Message send karna
-export const sendMessage = async (chatId: string, senderId: string, text: string) => {
+export const sendMessage = async (
+  chatId: string,
+  senderId: string,
+  text: string,
+  imageUrl?: string | null
+) => {
   try {
-    const messageRef = collection(db, "chats", chatId, "messages");
+    const messagesRef = collection(db, "chats", chatId, "messages");
     
-    await addDoc(messageRef, {
+    await addDoc(messagesRef, {
       text: text,
+      imageUrl: imageUrl || null,
       senderId: senderId,
+      isSystem: false,
       timestamp: serverTimestamp(),
-      read: false
+      read: false,
     });
-    
-    // Update last message in chat document
-    await updateDoc(doc(db, "chats", chatId), {
-      lastMessage: text,
-      lastMessageTime: serverTimestamp()
+
+    const chatRef = doc(db, "chats", chatId);
+    await updateDoc(chatRef, {
+      lastMessage: imageUrl ? "📷 Photo" : text,
+      lastMessageTime: serverTimestamp(),
     });
-    
   } catch (error) {
     console.error("Error sending message:", error);
     throw error;
   }
 };
 
-// Messages ko real-time listen karna
-export const listenToMessages = (chatId: string, callback: (messages: any[]) => void) => {
-  const messagesQuery = query(
-    collection(db, "chats", chatId, "messages"),
-    orderBy("timestamp", "asc")
-  );
-  
-  const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
-    const messagesList = snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    callback(messagesList);
-  });
-  
-  return unsubscribe;
+export const sendSystemMessage = async (chatId: string, text: string) => {
+  try {
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    
+    await addDoc(messagesRef, {
+      text: text,
+      imageUrl: null,
+      senderId: "system",
+      isSystem: true,
+      timestamp: serverTimestamp(),
+      read: true,
+    });
+
+    const chatRef = doc(db, "chats", chatId);
+    await updateDoc(chatRef, {
+      lastMessage: text,
+      lastMessageTime: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error("Error sending system message:", error);
+    throw error;
+  }
 };
 
-// Messages ko mark as read karna
+export const listenToMessages = (
+  chatId: string,
+  callback: (messages: ChatMessage[]) => void
+) => {
+  const messagesRef = collection(db, "chats", chatId, "messages");
+  const q = query(messagesRef, orderBy("timestamp", "asc"));
+
+  return onSnapshot(q, (snapshot) => {
+    const messages = snapshot.docs.map((docSnap) => ({
+      id: docSnap.id,
+      ...docSnap.data(),
+    })) as ChatMessage[];
+    callback(messages);
+  });
+};
+
 export const markMessagesAsRead = async (chatId: string, userId: string) => {
   try {
-    const messagesQuery = query(
-      collection(db, "chats", chatId, "messages"),
-      where("read", "==", false)
-    );
-    
-    const snapshot = await getDocs(messagesQuery);
-    
-    const updatePromises = snapshot.docs.map(messageDoc => {
-      const messageData = messageDoc.data();
-      // Sirf dusre user ke messages mark karo
-      if (messageData.senderId !== userId) {
-        return updateDoc(messageDoc.ref, { read: true });
-      }
-      return Promise.resolve();
-    });
-    
-    await Promise.all(updatePromises);
+    const messagesRef = collection(db, "chats", chatId, "messages");
+    const q = query(messagesRef, where("read", "==", false));
+    const snapshot = await getDocs(q);
+
+    const updates = snapshot.docs
+      .filter((docSnap) => docSnap.data().senderId !== userId)
+      .map((docSnap) => updateDoc(docSnap.ref, { read: true }));
+
+    if (updates.length > 0) {
+      await Promise.all(updates);
+    }
   } catch (error) {
     console.error("Error marking messages as read:", error);
   }
 };
 
-// Chat ID get karna booking se
-export const getChatIdByBooking = async (bookingId: string): Promise<string | null> => {
+// ⭐ NEW: Typing Indicator Functions
+export const setTypingStatus = async (
+  chatId: string,
+  userId: string,
+  isTyping: boolean
+) => {
   try {
-    const chatQuery = query(collection(db, "chats"), where("bookingId", "==", bookingId));
-    const chatSnapshot = await getDocs(chatQuery);
-    
-    if (chatSnapshot.empty) {
-      return null;
-    }
-    
-    return chatSnapshot.docs[0].id;
+    const chatRef = doc(db, "chats", chatId);
+    await updateDoc(chatRef, {
+      [`typing.${userId}`]: isTyping,
+      [`typingTime.${userId}`]: isTyping ? serverTimestamp() : null,
+    });
   } catch (error) {
-    console.error("Error getting chat ID:", error);
-    return null;
+    console.error("Error setting typing status:", error);
   }
+};
+
+export const listenToTypingStatus = (
+  chatId: string,
+  currentUserId: string,
+  callback: (typingUsers: string[]) => void
+) => {
+  const chatRef = doc(db, "chats", chatId);
+  
+  return onSnapshot(chatRef, (docSnap) => {
+    if (docSnap.exists()) {
+      const data = docSnap.data();
+      const typing = data.typing || {};
+      
+      const typingUsers = Object.keys(typing).filter(
+        (uid) => uid !== currentUserId && typing[uid] === true
+      );
+      
+      callback(typingUsers);
+    }
+  });
 };

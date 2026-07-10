@@ -1,206 +1,403 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import Link from "next/link";
-import { useSearchParams } from "next/navigation";
-import { Phone, MessageCircle, MapPin, ArrowLeft, Loader2 } from "lucide-react";
-import { Suspense } from "react";
+import { useEffect, useState } from "react";
 import { db } from "@/lib/firebase";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Star, MapPin, Phone, Mail, Briefcase, Calendar, AlertCircle } from "lucide-react";
+import { Suspense } from "react";
 
-// Main Content Component
-function ProfessionalsContent() {
-  const searchParams = useSearchParams();
-  const serviceFilter = searchParams.get('service');
-  
-  const [professionals, setProfessionals] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+interface Professional {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+  category: string;  // ✅ Changed from serviceType
+  rating: number;
+  totalReviews: number;
+  experience: number;
+  address: string;
+  location?: {
+    latitude: number;
+    longitude: number;
+  } | string;
+  isActive?: boolean;  // ✅ Added
+  status?: string;  // ✅ Added
+  isAvailable: boolean;
+  profileImage?: string;
+}
 
-  // Firebase se data fetch karna
-  useEffect(() => {
-    const fetchProfessionals = async () => {
-      setLoading(true);
-      try {
-        // Sirf approved aur active professionals fetch karo
-        const q = query(
-          collection(db, "professionals"),
-          where("status", "==", "approved"),
-          where("isActive", "==", true)
-        );
-        
-        const querySnapshot = await getDocs(q);
-        const prosList: any[] = [];
-        
-        querySnapshot.forEach((doc) => {
-          prosList.push({ 
-            id: doc.id, 
-            ...doc.data(),
-            // Fallback values agar fields missing ho
-            name: doc.data().name || "Professional",
-            role: doc.data().category || "Service Provider",
-            skills: doc.data().skills || "Quality service guaranteed",
-            location: doc.data().location || "Karnal, Haryana",
-            phone: doc.data().phone || "9050951046"
-          });
-        });
-        
-        setProfessionals(prosList);
-      } catch (error) {
-        console.error("Error fetching professionals:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchProfessionals();
-  }, []);
-
-  // Filter Logic
-  const filteredProfessionals = serviceFilter
-    ? professionals.filter(p => p.role.toLowerCase() === serviceFilter.toLowerCase())
-    : professionals;
-
-  const pageTitle = serviceFilter 
-    ? `Available ${serviceFilter} Services in Karnal` 
-    : "All Professional Services in Karnal";
-
-  // Loading State
-  if (loading) {
-    return (
-      <div style={{ 
-        minHeight: "100vh", 
-        background: "#fffbeb", 
-        paddingTop: "120px",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        gap: "16px"
-      }}>
-        <Loader2 size={48} color="#d97706" className="animate-spin" />
-        <p style={{ fontSize: "1.2rem", color: "#d97706", fontWeight: "600" }}>
-          Loading professionals...
-        </p>
-      </div>
-    );
-  }
-
+export default function ProfessionalsPage() {
   return (
-    <div style={{ minHeight: "100vh", background: "#fffbeb", paddingTop: "120px", paddingBottom: "60px" }}>
-      <div style={{ maxWidth: "1200px", margin: "0 auto", padding: "0 20px" }}>
-        
-        {/* Back Button */}
-        <Link href="/" style={{ display: "inline-flex", alignItems: "center", gap: "8px", color: "#d97706", textDecoration: "none", marginBottom: "20px", fontWeight: "600", fontSize: "1rem" }}>
-          <ArrowLeft size={20} /> Back to Home
-        </Link>
-        
-        {/* Header */}
-        <h1 style={{ fontSize: "2.5rem", fontWeight: "800", color: "#111827", marginBottom: "10px" }}>
-          {pageTitle}
+    <div style={{ 
+      minHeight: "100vh", 
+      background: "linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)", 
+      padding: "20px" 
+    }}>
+      <div style={{ maxWidth: "1200px", margin: "0 auto" }}>
+        <h1 style={{ 
+          fontSize: "2.5rem", 
+          fontWeight: "800", 
+          color: "#111827", 
+          marginBottom: "8px",
+          textAlign: "center"
+        }}>
+          Our Professionals
         </h1>
-        <p style={{ fontSize: "1.1rem", color: "#6b7280", marginBottom: "40px" }}>
-          Directly connect with verified experts. No middleman.
+        <p style={{ 
+          color: "#6b7280", 
+          marginBottom: "32px",
+          textAlign: "center"
+        }}>
+          Expert service providers ready to help you
         </p>
-
-        {/* Empty State */}
-        {filteredProfessionals.length === 0 ? (
-          <div style={{
-            textAlign: "center",
-            padding: "60px 20px",
-            background: "white",
-            borderRadius: "20px",
-            boxShadow: "0 10px 30px rgba(0,0,0,0.05)"
+        
+        <Suspense fallback={
+          <div style={{ 
+            display: "flex", 
+            justifyContent: "center", 
+            alignItems: "center", 
+            minHeight: "400px" 
           }}>
-            <p style={{ fontSize: "1.5rem", color: "#6b7280", fontWeight: "600", marginBottom: "10px" }}>
-              {serviceFilter ? `No ${serviceFilter} professionals available yet` : "No professionals available yet"}
-            </p>
-            <p style={{ fontSize: "1rem", color: "#9ca3af" }}>
-              Please check back later or try a different category.
-            </p>
+            <p style={{ fontSize: "1.5rem", color: "#d97706" }}>Loading professionals...</p>
           </div>
-        ) : (
-          /* Workers Grid */
-          <div style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))",
-            gap: "30px"
-          }}>
-            {filteredProfessionals.map((pro) => (
-              <div key={pro.id} style={{
-                background: "white",
-                borderRadius: "20px",
-                padding: "30px",
-                boxShadow: "0 10px 30px rgba(0,0,0,0.05)",
-                border: "1px solid #f3f4f6",
-                display: "flex",
-                flexDirection: "column"
-              }}>
-                
-                {/* Name & Role */}
-                <h3 style={{ fontSize: "1.5rem", fontWeight: "800", color: "#111827", marginBottom: "5px" }}>{pro.name}</h3>
-                <p style={{ color: "#d97706", fontWeight: "700", marginBottom: "20px", fontSize: "1rem", textTransform: "uppercase", letterSpacing: "0.5px" }}>{pro.role}</p>
-                
-                {/* Skills */}
-                <div style={{ marginBottom: "20px", flex: 1 }}>
-                  <p style={{ fontSize: "0.95rem", color: "#4b5563", lineHeight: "1.6" }}>
-                    <strong style={{ color: "#111827" }}>Skills:</strong> {pro.skills}
-                  </p>
-                </div>
-
-                {/* Location */}
-                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "25px", color: "#6b7280", fontSize: "0.95rem" }}>
-                  <MapPin size={18} /> {pro.location}
-                </div>
-
-                {/* Action Buttons */}
-                <div style={{ display: "flex", gap: "12px" }}>
-                  <a 
-                    href={`https://wa.me/91${pro.phone}?text=Hello ${pro.name}, I need your ${pro.role} services.`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    style={{
-                      flex: 1,
-                      display: "flex", justifyContent: "center", alignItems: "center", gap: "8px",
-                      background: "#25D366", color: "white",
-                      padding: "12px", borderRadius: "10px",
-                      textDecoration: "none", fontWeight: "700", fontSize: "0.95rem",
-                      transition: "transform 0.2s"
-                    }}
-                  >
-                    <MessageCircle size={18} /> WhatsApp
-                  </a>
-                  <a 
-                    href={`tel:${pro.phone}`}
-                    style={{
-                      flex: 1,
-                      display: "flex", justifyContent: "center", alignItems: "center", gap: "8px",
-                      background: "#d97706", color: "white",
-                      padding: "12px", borderRadius: "10px",
-                      textDecoration: "none", fontWeight: "700", fontSize: "0.95rem",
-                      transition: "transform 0.2s"
-                    }}
-                  >
-                    <Phone size={18} /> Call
-                  </a>
-                </div>
-
-              </div>
-            ))}
-          </div>
-        )}
-
+        }>
+          <ProfessionalsContent />
+        </Suspense>
       </div>
     </div>
   );
 }
 
-// Wrapper Component with Suspense
-export default function ProfessionalsPage() {
+function ProfessionalsContent() {
+  const [professionals, setProfessionals] = useState<Professional[]>([]);
+  const [loading, setLoading] = useState(true);
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const selectedService = searchParams.get('service');
+
+  useEffect(() => {
+    setLoading(true);
+    
+    let unsubscribe: (() => void) | undefined;
+    let professionalsRef = collection(db, "professionals");
+    
+    const processSnapshot = (snapshot: any) => {
+      const profs = snapshot.docs.map((doc: any) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Professional[];
+      
+      console.log(`Loaded ${profs.length} professionals`);
+      profs.forEach((prof, idx) => {
+        console.log(`${idx + 1}. ${prof.name} - Category: "${prof.category}" - Active: ${prof.isActive}`);
+      });
+      
+      setProfessionals(profs);
+      setLoading(false);
+    };
+
+    if (selectedService) {
+      console.log("🔍 Filtering by category:", selectedService);
+      const q = query(
+        professionalsRef, 
+        where("category", "==", selectedService)  // ✅ category use karo
+      );
+      unsubscribe = onSnapshot(q, processSnapshot, (error) => {
+        console.error("Error:", error);
+        setLoading(false);
+      });
+    } else {
+      console.log("📋 Loading all professionals");
+      unsubscribe = onSnapshot(professionalsRef, processSnapshot, (error) => {
+        console.error("Error:", error);
+        setLoading(false);
+      });
+    }
+
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [selectedService]);
+
+  const handleBookNow = (professionalId: string) => {
+    router.push(`/book?professionalId=${professionalId}`);
+  };
+
+  if (loading) {
+    return null;
+  }
+
   return (
-    <Suspense fallback={<div style={{ minHeight: "100vh", background: "#fffbeb", paddingTop: "120px", display: "flex", justifyContent: "center", alignItems: "center" }}>
-      <p style={{ fontSize: "1.5rem", color: "#d97706" }}>Loading professionals...</p>
-    </div>}>
-      <ProfessionalsContent />
-    </Suspense>
+    <>
+      {selectedService && (
+        <div style={{
+          background: "linear-gradient(135deg, #d97706, #b45309)",
+          color: "white",
+          padding: "16px 24px",
+          borderRadius: "12px",
+          marginBottom: "24px",
+          textAlign: "center"
+        }}>
+          <h2 style={{ margin: 0, fontSize: "1.5rem", fontWeight: "700" }}>
+            {selectedService} Professionals
+          </h2>
+          <p style={{ margin: "4px 0 0", opacity: 0.9 }}>
+            {professionals.length} {professionals.length === 1 ? 'professional' : 'professionals'} available
+          </p>
+        </div>
+      )}
+
+      {professionals.length === 0 ? (
+        <div style={{
+          textAlign: "center",
+          padding: "60px 20px",
+          background: "white",
+          borderRadius: "20px",
+          boxShadow: "0 10px 40px rgba(0,0,0,0.1)",
+          margin: "40px auto",
+          maxWidth: "600px"
+        }}>
+          <div style={{
+            width: "120px",
+            height: "120px",
+            margin: "0 auto 24px",
+            background: "linear-gradient(135deg, #fef3c7, #fde68a)",
+            borderRadius: "50%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center"
+          }}>
+            <AlertCircle size={60} color="#d97706" />
+          </div>
+          <h2 style={{
+            fontSize: "1.8rem",
+            fontWeight: "700",
+            color: "#111827",
+            marginBottom: "12px"
+          }}>
+            No Professionals Available
+          </h2>
+          <p style={{
+            fontSize: "1.1rem",
+            color: "#6b7280",
+            marginBottom: "8px"
+          }}>
+            {selectedService 
+              ? `We don't have any professionals for "${selectedService}" yet.`
+              : "We don't have any professionals registered yet."}
+          </p>
+          <p style={{
+            fontSize: "1rem",
+            color: "#9ca3af",
+            marginBottom: "24px"
+          }}>
+            Please check back later or try another service.
+          </p>
+          <button
+            onClick={() => router.push('/services')}
+            style={{
+              padding: "14px 32px",
+              background: "linear-gradient(135deg, #d97706, #b45309)",
+              color: "white",
+              border: "none",
+              borderRadius: "12px",
+              fontSize: "1.05rem",
+              fontWeight: "600",
+              cursor: "pointer",
+              boxShadow: "0 4px 12px rgba(217, 119, 6, 0.3)",
+            }}
+          >
+            Browse Other Services
+          </button>
+        </div>
+      ) : (
+        <div style={{ 
+          display: "grid", 
+          gridTemplateColumns: "repeat(auto-fill, minmax(320px, 1fr))", 
+          gap: "24px" 
+        }}>
+          {professionals.map((prof) => (
+            <div
+              key={prof.id}
+              style={{
+                background: "white",
+                borderRadius: "16px",
+                padding: "24px",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
+                transition: "all 0.3s ease",
+                display: "flex",
+                flexDirection: "column",
+                opacity: prof.isActive === false ? 0.7 : 1,  // ✅ Inactive ko dim karo
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-6px)";
+                e.currentTarget.style.boxShadow = "0 8px 24px rgba(0, 0, 0, 0.12)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.08)";
+              }}
+            >
+              <div style={{ display: "flex", alignItems: "center", gap: "16px", marginBottom: "16px" }}>
+                <div
+                  style={{
+                    width: "64px",
+                    height: "64px",
+                    borderRadius: "50%",
+                    background: prof.profileImage
+                      ? `url(${prof.profileImage}) center/cover`
+                      : "linear-gradient(135deg, #d97706, #b45309)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "1.5rem",
+                    fontWeight: "700",
+                    flexShrink: 0,
+                  }}
+                >
+                  {!prof.profileImage && prof.name.charAt(0).toUpperCase()}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h3 style={{ 
+                    margin: 0, 
+                    fontSize: "1.25rem", 
+                    fontWeight: "700", 
+                    color: "#111827",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}>
+                    {prof.name}
+                  </h3>
+                  <p style={{ 
+                    margin: "4px 0 0", 
+                    color: "#6b7280", 
+                    fontSize: "0.9rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap"
+                  }}>
+                    {prof.category}  {/* ✅ category use karo */}
+                  </p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "6px", marginTop: "6px" }}>
+                    <Star size={16} color="#fbbf24" fill="#fbbf24" />
+                    <span style={{ fontWeight: "600", color: "#111827", fontSize: "0.9rem" }}>
+                      {prof.rating || 0}
+                    </span>
+                    <span style={{ color: "#9ca3af", fontSize: "0.85rem" }}>
+                      ({prof.totalReviews || 0} reviews)
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div style={{ 
+                borderTop: "1px solid #f3f4f6", 
+                paddingTop: "16px",
+                flex: 1
+              }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", color: "#4b5563" }}>
+                  <Briefcase size={16} />
+                  <span style={{ fontSize: "0.9rem" }}>
+                    {prof.experience || 0} years experience
+                  </span>
+                </div>
+                
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", color: "#4b5563" }}>
+                  <MapPin size={16} />
+                  <span style={{ 
+                    fontSize: "0.9rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flex: 1
+                  }}>
+                    {typeof prof.location === 'string' ? prof.location : (prof.address || "Address not available")}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "10px", color: "#4b5563" }}>
+                  <Phone size={16} />
+                  <span style={{ fontSize: "0.9rem" }}>
+                    {prof.phone || "N/A"}
+                  </span>
+                </div>
+
+                <div style={{ display: "flex", alignItems: "center", gap: "8px", color: "#4b5563" }}>
+                  <Mail size={16} />
+                  <span style={{ 
+                    fontSize: "0.9rem",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    flex: 1
+                  }}>
+                    {prof.email || "N/A"}
+                  </span>
+                </div>
+              </div>
+
+              {/* ✅ Status Badge */}
+              {prof.status === "pending" && (
+                <div style={{
+                  marginTop: "12px",
+                  padding: "8px",
+                  background: "#fef3c7",
+                  color: "#92400e",
+                  borderRadius: "8px",
+                  textAlign: "center",
+                  fontSize: "0.85rem",
+                  fontWeight: "600"
+                }}>
+                  ⏳ Pending Approval
+                </div>
+              )}
+
+              <div
+                style={{
+                  marginTop: "12px",
+                  padding: "12px",
+                  background: prof.isActive !== false ? "#d1fae5" : "#fee2e2",
+                  color: prof.isActive !== false ? "#065f46" : "#991b1b",
+                  borderRadius: "8px",
+                  textAlign: "center",
+                  fontWeight: "600",
+                  fontSize: "0.9rem",
+                }}
+              >
+                {prof.isActive !== false ? "✓ Available for work" : "✗ Currently unavailable"}
+              </div>
+
+              <button
+                onClick={() => handleBookNow(prof.id)}
+                disabled={prof.isActive === false}
+                style={{
+                  marginTop: "12px",
+                  width: "100%",
+                  padding: "14px",
+                  background: prof.isActive !== false ? "linear-gradient(135deg, #d97706, #b45309)" : "#e5e7eb",
+                  color: prof.isActive !== false ? "white" : "#9ca3af",
+                  border: "none",
+                  borderRadius: "10px",
+                  fontSize: "1.05rem",
+                  fontWeight: "600",
+                  cursor: prof.isActive !== false ? "pointer" : "not-allowed",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "8px",
+                  boxShadow: prof.isActive !== false ? "0 4px 12px rgba(217, 119, 6, 0.3)" : "none",
+                }}
+              >
+                <Calendar size={18} />
+                {prof.isActive !== false ? "Book Now" : "Unavailable"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </>
   );
 }
