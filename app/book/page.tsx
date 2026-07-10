@@ -1,11 +1,14 @@
 "use client";
 
+// ✅ YE LINE ADD KARO - Dynamic page force karo
+export const dynamic = 'force-dynamic';
+
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp, doc, getDoc } from "firebase/firestore";
 import { onAuthStateChanged, User } from "firebase/auth";
-import { Calendar, Clock, MapPin, Phone, FileText, ArrowLeft, Hammer, User as UserIcon } from "lucide-react";
+import { ArrowLeft, Hammer } from "lucide-react";
 import dynamic from "next/dynamic";
 
 // ⭐ Dynamic Import with SSR disabled
@@ -19,9 +22,6 @@ const LocationPicker = dynamic(
 
 export default function BookServicePage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const professionalId = searchParams.get('professionalId');
-  
   const [loading, setLoading] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [customerName, setCustomerName] = useState("");
@@ -40,7 +40,20 @@ export default function BookServicePage() {
   const [longitude, setLongitude] = useState<number | null>(null);
   const [locationSelected, setLocationSelected] = useState(false);
 
-  // Check if user is logged in & fetch professional if provided
+  // ✅ FIXED: URL se professionalId manually parse karo
+  useEffect(() => {
+    // Client-side par URL se parameter lo
+    if (typeof window !== 'undefined') {
+      const urlParams = new URLSearchParams(window.location.search);
+      const professionalId = urlParams.get('professionalId');
+      
+      if (professionalId) {
+        fetchProfessional(professionalId);
+      }
+    }
+  }, []);
+
+  // Check if user is logged in
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (!currentUser) {
@@ -54,27 +67,27 @@ export default function BookServicePage() {
           setCustomerName(userData.name || "");
           setPhone(userData.phone || "");
         }
-
-        // ✅ NEW: Fetch professional details if professionalId is in URL
-        if (professionalId) {
-          try {
-            const profDoc = await getDoc(doc(db, "professionals", professionalId));
-            if (profDoc.exists()) {
-              const profData = { id: profDoc.id, ...profDoc.data() };
-              setProfessional(profData);
-              // Auto-set service type from professional's category
-              if (profData.category) {
-                setServiceType(profData.category);
-              }
-            }
-          } catch (error) {
-            console.error("Error fetching professional:", error);
-          }
-        }
       }
     });
     return () => unsubscribe();
-  }, [router, professionalId]);
+  }, [router]);
+
+  // ✅ NEW: Fetch professional function
+  const fetchProfessional = async (professionalId: string) => {
+    try {
+      const profDoc = await getDoc(doc(db, "professionals", professionalId));
+      if (profDoc.exists()) {
+        const profData = { id: profDoc.id, ...profDoc.data() };
+        setProfessional(profData);
+        // Auto-set service type from professional's category
+        if (profData.category) {
+          setServiceType(profData.category);
+        }
+      }
+    } catch (error) {
+      console.error("Error fetching professional:", error);
+    }
+  };
 
   // ⭐ Handle location selection from map
   const handleLocationSelect = (lat: number, lng: number, addr: string) => {
@@ -97,14 +110,13 @@ export default function BookServicePage() {
     setLoading(true);
 
     try {
-      // ✅ FIXED: serviceType ko properly handle karo
       const bookingData = {
         customerId: user.uid,
         customerName: customerName,
-        serviceType: serviceType || "Not specified", // ✅ Undefined protection
+        serviceType: serviceType || "Not specified",
         
-        // ✅ NEW: Professional details if selected
-        professionalId: professionalId || null,
+        // ✅ Professional details if selected
+        professionalId: professional?.id || null,
         professionalName: professional?.name || null,
         
         description: description,
