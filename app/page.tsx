@@ -12,6 +12,7 @@ export default function Home() {
       <HowItWorks />
       <FAQSection />
       <CTASection />
+      {/* Floating button hata diya kyunki ab wo Navbar mein hai */}
     </div>
   );
 }

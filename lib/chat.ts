@@ -23,10 +23,13 @@ export interface ChatMessage {
   read: boolean;
 }
 
+// ✅ 1. CREATE OR GET CHAT (With Names & Participants)
 export const createOrGetChat = async (
   bookingId: string,
   customerId: string,
-  professionalId: string
+  professionalId: string,
+  customerName: string = "Customer",
+  professionalName: string = "Professional"
 ): Promise<string> => {
   try {
     const chatsRef = collection(db, "chats");
@@ -42,6 +45,9 @@ export const createOrGetChat = async (
       bookingId,
       customerId,
       professionalId,
+      customerName,
+      professionalName,
+      participants: [customerId, professionalId],
       createdAt: serverTimestamp(),
       lastMessage: "",
       lastMessageTime: serverTimestamp(),
@@ -56,6 +62,7 @@ export const createOrGetChat = async (
   }
 };
 
+// ✅ 2. SEND MESSAGE
 export const sendMessage = async (
   chatId: string,
   senderId: string,
@@ -85,6 +92,7 @@ export const sendMessage = async (
   }
 };
 
+// ✅ 3. SEND SYSTEM MESSAGE
 export const sendSystemMessage = async (chatId: string, text: string) => {
   try {
     const messagesRef = collection(db, "chats", chatId, "messages");
@@ -109,6 +117,7 @@ export const sendSystemMessage = async (chatId: string, text: string) => {
   }
 };
 
+// ✅ 4. LISTEN TO MESSAGES (Jo missing tha!)
 export const listenToMessages = (
   chatId: string,
   callback: (messages: ChatMessage[]) => void
@@ -125,6 +134,7 @@ export const listenToMessages = (
   });
 };
 
+// ✅ 5. MARK AS READ
 export const markMessagesAsRead = async (chatId: string, userId: string) => {
   try {
     const messagesRef = collection(db, "chats", chatId, "messages");
@@ -143,7 +153,7 @@ export const markMessagesAsRead = async (chatId: string, userId: string) => {
   }
 };
 
-// ⭐ NEW: Typing Indicator Functions
+// ✅ 6. SET TYPING STATUS
 export const setTypingStatus = async (
   chatId: string,
   userId: string,
@@ -160,6 +170,7 @@ export const setTypingStatus = async (
   }
 };
 
+// ✅ 7. LISTEN TO TYPING STATUS
 export const listenToTypingStatus = (
   chatId: string,
   currentUserId: string,

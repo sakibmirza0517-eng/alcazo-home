@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Menu, X, Hammer, Home, Briefcase, Users, Calendar, User, LogOut, Shield } from "lucide-react";
+import { Menu, X, Hammer, Home, Briefcase, Calendar, User, LogOut, Shield, MessageCircle } from "lucide-react"; // ✅ MessageCircle added
 import { auth, db } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { doc, getDoc } from "firebase/firestore";
@@ -161,6 +161,12 @@ export default function Navbar() {
 
                 {user ? (
                   <>
+                    {/* ✅ MESSAGES ICON FOR DESKTOP (Logged In) */}
+                    <Link href="/messages" style={messageIconStyle}>
+                      <MessageCircle size={22} />
+                      <span style={notificationDotStyle}></span>
+                    </Link>
+
                     {isAdmin && (
                       <Link href="/admin" style={adminButtonStyle}>
                         <Shield size={18} />
@@ -181,6 +187,12 @@ export default function Navbar() {
                   </>
                 ) : (
                   <>
+                    {/* ✅ MESSAGES ICON FOR DESKTOP (Logged Out) */}
+                    <Link href="/messages" style={messageIconStyle}>
+                      <MessageCircle size={22} />
+                      <span style={notificationDotStyle}></span>
+                    </Link>
+
                     <Link href="/login" style={loginButtonStyle}>
                       <User size={18} />
                       <span>Login</span>
@@ -214,7 +226,7 @@ export default function Navbar() {
           </div>
         </div>
 
-        {/* ✅ Mobile Menu - WITH BACK TO HOME BUTTON */}
+        {/* ✅ Mobile Menu */}
         {isOpen && isMobile && (
           <div style={{
             position: 'absolute',
@@ -229,7 +241,7 @@ export default function Navbar() {
             maxHeight: 'calc(100vh - 80px)',
             overflowY: 'auto'
           }}>
-            {/* ✅ Back to Home Button - PROMINENT */}
+            {/* Back to Home Button */}
             <Link 
               href="/" 
               onClick={() => setIsOpen(false)} 
@@ -261,38 +273,28 @@ export default function Navbar() {
             }} />
 
             {/* Common Links */}
-            <Link 
-              href="/" 
-              onClick={() => setIsOpen(false)} 
-              style={mobileLinkStyle}
-            >
+            <Link href="/" onClick={() => setIsOpen(false)} style={mobileLinkStyle}>
               <Home size={20} color="#d97706" />
               <span>Home</span>
             </Link>
 
-            <Link 
-              href="/professionals" 
-              onClick={() => setIsOpen(false)} 
-              style={mobileLinkStyle}
-            >
+            <Link href="/professionals" onClick={() => setIsOpen(false)} style={mobileLinkStyle}>
               <Briefcase size={20} color="#d97706" />
               <span>Services</span>
             </Link>
 
-            <Link 
-              href="/book-service" 
-              onClick={() => setIsOpen(false)} 
-              style={mobileLinkStyle}
-            >
+            <Link href="/book-service" onClick={() => setIsOpen(false)} style={mobileLinkStyle}>
               <Calendar size={20} color="#d97706" />
               <span>Book a Service</span>
             </Link>
 
-            <Link 
-              href="/register" 
-              onClick={() => setIsOpen(false)} 
-              style={mobileLinkStyle}
-            >
+            {/* ✅ MESSAGES LINK FOR MOBILE */}
+            <Link href="/messages" onClick={() => setIsOpen(false)} style={mobileLinkStyle}>
+              <MessageCircle size={20} color="#d97706" />
+              <span>Messages</span>
+            </Link>
+
+            <Link href="/register" onClick={() => setIsOpen(false)} style={mobileLinkStyle}>
               <Briefcase size={20} color="#d97706" />
               <span>Become a Professional</span>
             </Link>
@@ -308,16 +310,7 @@ export default function Navbar() {
             {user ? (
               <>
                 {isAdmin && (
-                  <Link 
-                    href="/admin" 
-                    onClick={() => setIsOpen(false)} 
-                    style={{
-                      ...mobileLinkStyle,
-                      background: '#111827',
-                      color: 'white',
-                      fontWeight: '700'
-                    }}
-                  >
+                  <Link href="/admin" onClick={() => setIsOpen(false)} style={{...mobileLinkStyle, background: '#111827', color: 'white', fontWeight: '700'}}>
                     <Shield size={20} color="white" />
                     <span>Admin Panel</span>
                   </Link>
@@ -326,13 +319,7 @@ export default function Navbar() {
                 <Link
                   href={userData?.role === "professional" ? "/professional-dashboard" : "/dashboard"}
                   onClick={() => setIsOpen(false)}
-                  style={{
-                    ...mobileLinkStyle,
-                    color: '#d97706',
-                    border: '2px solid #d97706',
-                    fontWeight: '700',
-                    background: 'rgba(217, 119, 6, 0.05)'
-                  }}
+                  style={{...mobileLinkStyle, color: '#d97706', border: '2px solid #d97706', fontWeight: '700', background: 'rgba(217, 119, 6, 0.05)'}}
                 >
                   <User size={20} color="#d97706" />
                   <span>Dashboard</span>
@@ -340,15 +327,7 @@ export default function Navbar() {
 
                 <button
                   onClick={() => handleLogout()}
-                  style={{
-                    ...mobileLinkStyle,
-                    background: '#fee2e2',
-                    color: '#dc2626',
-                    border: 'none',
-                    fontWeight: '700',
-                    cursor: 'pointer',
-                    width: '100%'
-                  }}
+                  style={{...mobileLinkStyle, background: '#fee2e2', color: '#dc2626', border: 'none', fontWeight: '700', cursor: 'pointer', width: '100%'}}
                 >
                   <LogOut size={20} color="#dc2626" />
                   <span>Logout</span>
@@ -356,32 +335,12 @@ export default function Navbar() {
               </>
             ) : (
               <>
-                <Link
-                  href="/login"
-                  onClick={() => setIsOpen(false)}
-                  style={{
-                    ...mobileLinkStyle,
-                    color: '#d97706',
-                    border: '2px solid #d97706',
-                    fontWeight: '700',
-                    background: 'rgba(217, 119, 6, 0.05)'
-                  }}
-                >
+                <Link href="/login" onClick={() => setIsOpen(false)} style={{...mobileLinkStyle, color: '#d97706', border: '2px solid #d97706', fontWeight: '700', background: 'rgba(217, 119, 6, 0.05)'}}>
                   <User size={20} color="#d97706" />
                   <span>Login</span>
                 </Link>
 
-                <Link
-                  href="/register"
-                  onClick={() => setIsOpen(false)}
-                  style={{
-                    ...mobileLinkStyle,
-                    background: 'linear-gradient(135deg, #d97706, #b45309)',
-                    color: 'white',
-                    fontWeight: '700',
-                    border: 'none'
-                  }}
-                >
+                <Link href="/register" onClick={() => setIsOpen(false)} style={{...mobileLinkStyle, background: 'linear-gradient(135deg, #d97706, #b45309)', color: 'white', fontWeight: '700', border: 'none'}}>
                   <User size={20} color="white" />
                   <span>Register</span>
                 </Link>
@@ -394,7 +353,34 @@ export default function Navbar() {
   );
 }
 
-// Styles
+// ✅ NEW STYLES FOR MESSAGES ICON
+const messageIconStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '44px',
+  height: '44px',
+  borderRadius: '50%',
+  background: 'rgba(217, 119, 6, 0.1)',
+  color: '#d97706',
+  textDecoration: 'none',
+  position: 'relative' as const,
+  marginRight: '8px',
+  transition: 'all 0.3s ease'
+};
+
+const notificationDotStyle = {
+  position: 'absolute' as const,
+  top: '8px',
+  right: '8px',
+  width: '10px',
+  height: '10px',
+  background: '#ef4444',
+  borderRadius: '50%',
+  border: '2px solid white'
+};
+
+// Existing Styles
 const desktopLinkStyle = {
   display: 'flex',
   alignItems: 'center',
