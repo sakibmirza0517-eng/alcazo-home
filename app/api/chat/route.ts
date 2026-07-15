@@ -1,5 +1,16 @@
 import Groq from "groq-sdk";
 import { NextResponse } from "next/server";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+// Initialize Redis for rate limiting
+const redis = Redis.fromEnv();
+const ratelimit = new Ratelimit({
+  redis: redis,
+  limiter: Ratelimit.slidingWindow(20, "1 m"), // 20 requests per minute
+  analytics: true,
+  prefix: "alcazo_ratelimit"
+});
 
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
@@ -7,14 +18,45 @@ export const maxDuration = 30;
 
 export async function POST(req: Request) {
   try {
+    // ✅ RATE LIMITING CHECK
+    const identifier = req.headers.get("x-forwarded-for") || "unknown";
+    const { success, limit, reset, remaining } = await ratelimit.limit(identifier);
+
+    if (!success) {
+      return NextResponse.json({ 
+        error: "Too many requests. Please try again later.",
+        retryAfter: Math.ceil((reset - Date.now()) / 1000)
+      }, { 
+        status: 429,
+        headers: {
+          "X-RateLimit-Limit": limit.toString(),
+          "X-RateLimit-Remaining": remaining.toString(),
+          "X-RateLimit-Reset": reset.toString()
+        }
+      });
+    }
+
     const { messages } = await req.json();
+    
+    if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      return NextResponse.json({ error: "Invalid messages format" }, { status: 400 });
+    }
+
     const lastUserMessage = messages[messages.length - 1].content;
+
+    // ✅ INPUT VALIDATION
+    if (!lastUserMessage || typeof lastUserMessage !== "string") {
+      return NextResponse.json({ error: "Invalid message content" }, { status: 400 });
+    }
+
+    if (lastUserMessage.length > 1000) {
+      return NextResponse.json({ error: "Message too long (max 1000 characters)" }, { status: 400 });
+    }
 
     const completion = await groq.chat.completions.create({
       messages: [
         {
           role: "system",
-          // 🧠 ADVANCED TRAINING PROMPT: AI ko Alcazo ka exact expert bana diya hai
           content: `You are "Alcazo Assistant", the official AI support for Alcazo - a trusted home services platform based in Karnal, Haryana.
 
           ABOUT ALCAZO:
@@ -39,6 +81,7 @@ export async function POST(req: Request) {
       ],
       model: "llama-3.1-8b-instant",
       temperature: 0.7,
+      max_tokens: 200 // Limit response length
     });
 
     const aiResponse = completion.choices[0]?.message?.content || "Sorry, I couldn't process that.";
@@ -47,8 +90,16 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("❌ AI API CRASHED:", error.message);
+    
+    // Don't expose internal errors to users
+    if (error.message.includes("503") || error.message.includes("429")) {
+      return NextResponse.json({ 
+        error: "AI service is temporarily unavailable. Please try again in a moment." 
+      }, { status: 503 });
+    }
+
     return NextResponse.json({ 
-      error: "AI is currently busy. Please try again in a moment." 
-    }, { status: 503 });
+      error: "An error occurred while processing your request." 
+    }, { status: 500 });
   }
 }
