@@ -62,19 +62,15 @@ export default function MessagesPage() {
         // Step 1: Pehle chat document se ID aur Name lo
         let otherUserId = isCustomer ? data.professionalId : data.customerId;
         let otherUserName = isCustomer ? data.professionalName : data.customerName;
-        
-        console.log("🔍 Chat ID:", docSnap.id, "| Initial Other User ID:", otherUserId, "| Current Name:", otherUserName);
 
         // 🚨 STEP 2: SUPER FALLBACK - Agar chat mein ID undefined hai, toh Booking se lo!
         if (!otherUserId && data.bookingId) {
-          console.log("⚠️ User ID missing in chat. Fetching from Booking:", data.bookingId);
           try {
             const bookingDoc = await getDoc(doc(db, "bookings", data.bookingId));
             if (bookingDoc.exists()) {
               const bookingData = bookingDoc.data();
               otherUserId = isCustomer ? bookingData.professionalId : bookingData.customerId;
               otherUserName = isCustomer ? bookingData.professionalName : bookingData.customerName;
-              console.log("✅ Found IDs in Booking! New Other User ID:", otherUserId);
             }
           } catch (err) {
             console.error("Error fetching booking for fallback:", err);
@@ -92,26 +88,20 @@ export default function MessagesPage() {
             let userDoc = await getDoc(doc(db, "professionals", otherUserId));
             if (userDoc.exists()) {
               userData = userDoc.data();
-              console.log("✅ Found in 'professionals':", userData);
             }
 
-            // Nahi mila toh 'users' collection check karo (jahan 'name' field hai)
+            // Nahi mila toh 'users' collection check karo
             if (!userData) {
               userDoc = await getDoc(doc(db, "users", otherUserId));
               if (userDoc.exists()) {
                 userData = userDoc.data();
-                console.log("✅ Found in 'users':", userData);
               }
             }
 
-            // Naam extract karo (tumhare database mein 'name' field hai)
+            // Naam extract karo
             if (userData) {
               otherUserName = userData.name || userData.fullName || userData.displayName || userData.firstName || userData.shopName || "User";
-              console.log("🎯 Final Name Set To:", otherUserName);
-            } else {
-              console.log("❌ User ID", otherUserId, "not found in 'users' or 'professionals'");
             }
-
           } catch (error) {
             console.error("Error fetching user name:", error);
           }
@@ -135,7 +125,7 @@ export default function MessagesPage() {
         });
       }
 
-      // JavaScript se sort karo (Instant, no Firebase index needed!)
+      // JavaScript se sort karo
       chatList.sort((a, b) => {
         const timeA = a.lastMessageTime?.toDate ? a.lastMessageTime.toDate().getTime() : 0;
         const timeB = b.lastMessageTime?.toDate ? b.lastMessageTime.toDate().getTime() : 0;
@@ -236,17 +226,45 @@ export default function MessagesPage() {
       {/* Chat List */}
       <div style={{ padding: "0 0 80px 0" }}>
         {loading ? (
-          <div style={{ textAlign: "center", padding: "60px 20px", color: "#6b7280" }}>
-            <div style={{
-              width: "40px",
-              height: "40px",
-              border: "4px solid #fbbf24",
-              borderTop: "4px solid #d97706",
-              borderRadius: "50%",
-              animation: "spin 1s linear infinite",
-              margin: "0 auto 16px"
-            }} />
-            <p>Loading chats...</p>
+          // 🚀 PREMIUM ALCAZO BRANDED LOADING STATE
+          <div style={{
+            minHeight: "60vh",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            background: "linear-gradient(135deg, #fff8f0 0%, #fef3c7 100%)",
+            borderRadius: "16px",
+            margin: "20px",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.05)"
+          }}>
+            <div style={{ position: "relative", width: "80px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "20px" }}>
+              <div style={{
+                position: "absolute", width: "100%", height: "100%", borderRadius: "50%",
+                border: "4px solid transparent", borderTopColor: "#d97706", borderRightColor: "#d97706",
+                animation: "spinOuter 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite"
+              }}></div>
+              <div style={{
+                position: "absolute", width: "70%", height: "70%", borderRadius: "50%",
+                border: "4px solid transparent", borderBottomColor: "#b45309", borderLeftColor: "#b45309",
+                animation: "spinInner 1s cubic-bezier(0.4, 0, 0.2, 1) infinite"
+              }}></div>
+              <div style={{
+                position: "absolute", width: "40px", height: "40px",
+                background: "linear-gradient(135deg, #d97706, #b45309)", borderRadius: "50%",
+                display: "flex", alignItems: "center", justifyContent: "center", color: "white",
+                boxShadow: "0 4px 15px rgba(217, 119, 6, 0.4)",
+                animation: "pulse 2s ease-in-out infinite"
+              }}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9" />
+                  <path d="M17.64 15 22 10.64" />
+                  <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91" />
+                </svg>
+              </div>
+            </div>
+            <h2 style={{ margin: "0 0 8px 0", fontSize: "1.5rem", fontWeight: "800", color: "#111827" }}>Alcazo</h2>
+            <p style={{ margin: 0, fontSize: "0.9rem", color: "#6b7280", fontWeight: "500" }}>Loading your messages...</p>
           </div>
         ) : filteredChats.length === 0 ? (
           <div style={{ textAlign: "center", padding: "80px 20px", color: "#6b7280" }}>
@@ -345,11 +363,11 @@ export default function MessagesPage() {
         )}
       </div>
 
+      {/* ✅ UPDATED ANIMATIONS */}
       <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
+        @keyframes spinOuter { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes spinInner { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+        @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(0.95); } }
       `}</style>
     </div>
   );

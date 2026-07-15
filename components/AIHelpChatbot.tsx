@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent, useRef, useEffect } from "react";
+import { usePathname } from "next/navigation"; // ✅ Fix 4: Pathname check karne ke liye
 import { X, Send } from "lucide-react";
 
 interface Message {
@@ -17,6 +18,7 @@ const QUICK_QUESTIONS = [
 ];
 
 export default function AIHelpChatbot() {
+  const pathname = usePathname(); // ✅ Fix 4: Current URL pata karne ke liye
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
@@ -90,6 +92,10 @@ export default function AIHelpChatbot() {
 
   // ✅ CLOSED STATE: Floating Button
   if (!isOpen) {
+    // ✅ Fix 4: Agar user Chat ya Messages page par hai, toh button bilkul nahi dikhega
+    const isChatPage = pathname?.startsWith("/chat") || pathname === "/messages";
+    if (isChatPage) return null;
+
     return (
       <button
         onClick={() => setIsOpen(true)}
@@ -201,12 +207,12 @@ export default function AIHelpChatbot() {
         flex: 1, 
         overflowY: "auto", 
         overflowX: "hidden",
+        overscrollBehavior: "contain", // ✅ Fix 2: Scroll bleed ko rokta hai (Background page scroll nahi hoga)
         padding: "12px", 
         background: "#f9fafb",
-        // 🚀 Scrollbar chhupane ke magic styles:
-        scrollbarWidth: "none", /* Firefox */
-        msOverflowStyle: "none", /* IE/Edge */
-        WebkitOverflowScrolling: "touch" /* Smooth iOS scrolling */
+        scrollbarWidth: "none", 
+        msOverflowStyle: "none", 
+        WebkitOverflowScrolling: "touch" 
       }}>
         {messages.length === 0 && (
           <div style={{ textAlign: "center", padding: "20px 12px" }}>
@@ -323,7 +329,6 @@ export default function AIHelpChatbot() {
 
       {/* ✅ Global Scrollbar Hide + Animation Styles */}
       <style>{`
-        /* Chrome, Safari, Edge ke liye scrollbar chhupana */
         div::-webkit-scrollbar {
           display: none !important;
         }

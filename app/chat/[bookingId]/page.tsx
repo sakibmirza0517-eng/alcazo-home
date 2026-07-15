@@ -5,8 +5,7 @@ import { useRouter, useParams } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { doc, getDoc, onSnapshot } from "firebase/firestore";
 import { 
-  ArrowLeft, Send, Phone, MapPin, Calendar, 
-  Check, CheckCheck, MessageCircle, Loader2, Paperclip 
+  ArrowLeft, Send, Check, CheckCheck, MessageCircle, Loader2, Paperclip 
 } from "lucide-react";
 import { 
   createOrGetChat, 
@@ -17,7 +16,7 @@ import {
   setTypingStatus,
   listenToTypingStatus
 } from "@/lib/chat";
-import { statusInfo, TrackingStatus } from "@/lib/tracking";
+import { TrackingStatus } from "@/lib/tracking";
 
 export default function ChatRoom() {
   const router = useRouter();
@@ -44,10 +43,10 @@ export default function ChatRoom() {
   const currentUser = auth.currentUser;
 
   const quickReplies = [
-    { emoji: "", text: "Main 10 min mein pahunch raha hu" },
+    { emoji: "🚗", text: "Main 10 min mein pahunch raha hu" },
     { emoji: "📍", text: "Main location par aa gaya hu" },
     { emoji: "✅", text: "Kaam complete ho gaya hai" },
-    { emoji: "", text: "Thoda time lagega" }
+    { emoji: "⏳", text: "Thoda time lagega" }
   ];
 
   const scrollToBottom = () => {
@@ -103,10 +102,10 @@ export default function ChatRoom() {
         const newStatus = data.trackingStatus || "pending";
         if (newStatus !== lastTrackingStatus && chatId) {
           const msgs: Record<string, string> = {
-            "accepted": ` ${otherUser?.name || "Professional"} ne job accept ki`,
-            "on_the_way": ` ${otherUser?.name || "Professional"} raste mein hai`,
-            "arrived": ` ${otherUser?.name || "Professional"} aa gaya`,
-            "working": ` ${otherUser?.name || "Professional"} kaam kar raha hai`,
+            "accepted": `🤝 ${otherUser?.name || "Professional"} ne job accept ki`,
+            "on_the_way": `🚗 ${otherUser?.name || "Professional"} raste mein hai`,
+            "arrived": `📍 ${otherUser?.name || "Professional"} aa gaya`,
+            "working": `🛠️ ${otherUser?.name || "Professional"} kaam kar raha hai`,
             "completed": `✅ Job complete ho gayi`
           };
           if (msgs[newStatus]) {
@@ -129,14 +128,11 @@ export default function ChatRoom() {
     return () => unsubscribe();
   }, [chatId, currentUser]);
 
-  // ⭐ NEW: Typing Indicator Listener
   useEffect(() => {
     if (!chatId || !currentUser) return;
-    
     const unsubscribe = listenToTypingStatus(chatId, currentUser.uid, (users) => {
       setTypingUsers(users);
     });
-    
     return () => unsubscribe();
   }, [chatId, currentUser]);
 
@@ -176,16 +172,10 @@ export default function ChatRoom() {
     }
   };
 
-  // ⭐ NEW: Typing Handler
   const handleTyping = () => {
     if (!chatId || !currentUser) return;
-    
     setTypingStatus(chatId, currentUser.uid, true);
-    
-    if (typingTimeoutRef.current) {
-      clearTimeout(typingTimeoutRef.current);
-    }
-    
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
     typingTimeoutRef.current = setTimeout(() => {
       setTypingStatus(chatId, currentUser.uid, false);
     }, 2000);
@@ -201,18 +191,65 @@ export default function ChatRoom() {
     return d.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true });
   };
 
-  if (loading) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}><Loader2 size={48} color="#d97706" style={{animation:"spin 1s linear infinite"}}/></div>;
+  // 🚀 PREMIUM LOADING STATE (Alcazo Branded)
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        background: "linear-gradient(135deg, #fff8f0 0%, #fef3c7 100%)",
+        fontFamily: "system-ui, -apple-system, sans-serif"
+      }}>
+        <div style={{ position: "relative", width: "80px", height: "80px", display: "flex", alignItems: "center", justifyContent: "center", marginBottom: "20px" }}>
+          <div style={{
+            position: "absolute", width: "100%", height: "100%", borderRadius: "50%",
+            border: "4px solid transparent", borderTopColor: "#d97706", borderRightColor: "#d97706",
+            animation: "spinOuter 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite"
+          }}></div>
+          <div style={{
+            position: "absolute", width: "70%", height: "70%", borderRadius: "50%",
+            border: "4px solid transparent", borderBottomColor: "#b45309", borderLeftColor: "#b45309",
+            animation: "spinInner 1s cubic-bezier(0.4, 0, 0.2, 1) infinite"
+          }}></div>
+          <div style={{
+            position: "absolute", width: "40px", height: "40px",
+            background: "linear-gradient(135deg, #d97706, #b45309)", borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center", color: "white",
+            boxShadow: "0 4px 15px rgba(217, 119, 6, 0.4)",
+            animation: "pulse 2s ease-in-out infinite"
+          }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="m15 12-8.5 8.5c-.83.83-2.17.83-3 0 0 0 0 0 0 0a2.12 2.12 0 0 1 0-3L12 9" />
+              <path d="M17.64 15 22 10.64" />
+              <path d="m20.91 11.7-1.25-1.25c-.6-.6-.93-1.4-.93-2.25v-.86L16.01 4.6a5.56 5.56 0 0 0-3.94-1.64H9l.92.82A6.18 6.18 0 0 1 12 8.4v1.56l2 2h2.47l2.26 1.91" />
+            </svg>
+          </div>
+        </div>
+        <h2 style={{ margin: "0 0 8px 0", fontSize: "1.5rem", fontWeight: "800", color: "#111827" }}>Alcazo</h2>
+        <p style={{ margin: 0, fontSize: "0.9rem", color: "#6b7280", fontWeight: "500" }}>Loading your chat...</p>
+        <style>{`
+          @keyframes spinOuter { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+          @keyframes spinInner { 0% { transform: rotate(0deg); } 100% { transform: rotate(-360deg); } }
+          @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.8; transform: scale(0.95); } }
+        `}</style>
+      </div>
+    );
+  }
+
   if (!booking || !chatId) return <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center"}}>Loading...</div>;
 
-  const statusInfo = {
+  const statusData = {
     pending: { label: "Pending", color: "#6b7280", icon: "⏳" },
     accepted: { label: "Accepted", color: "#3b82f6", icon: "🤝" },
-    on_the_way: { label: "On the way", color: "#f59e0b", icon: "" },
+    on_the_way: { label: "On the way", color: "#f59e0b", icon: "🚗" },
     arrived: { label: "Arrived", color: "#8b5cf6", icon: "📍" },
-    working: { label: "Working", color: "#10b981", icon: "" },
+    working: { label: "Working", color: "#10b981", icon: "🛠️" },
     completed: { label: "Completed", color: "#22c55e", icon: "✅" }
   };
-  const currentStatus = statusInfo[trackingStatus as keyof typeof statusInfo] || statusInfo.pending;
+  const currentStatus = statusData[trackingStatus as keyof typeof statusData] || statusData.pending;
 
   return (
     <>
@@ -309,77 +346,38 @@ export default function ChatRoom() {
           </div>
         )}
 
-        {/*  TYPING INDICATOR */}
+        {/* TYPING INDICATOR */}
         {typingUsers.length > 0 && (
           <div style={{
-            background: "white",
-            padding: "8px 16px",
-            borderTop: "1px solid #f3f4f6",
-            fontSize: "0.8rem",
-            color: "#6b7280",
-            fontStyle: "italic",
-            display: "flex",
-            alignItems: "center",
-            gap: "8px"
+            background: "white", padding: "8px 16px", borderTop: "1px solid #f3f4f6",
+            fontSize: "0.8rem", color: "#6b7280", fontStyle: "italic", display: "flex",
+            alignItems: "center", gap: "8px", zIndex: 60, position: "relative"
           }}>
             <div style={{display: "flex", gap: "3px"}}>
-              <span style={{
-                width: "6px",
-                height: "6px",
-                background: "#9ca3af",
-                borderRadius: "50%",
-                animation: "bounce 1.4s infinite ease-in-out both"
-              }}></span>
-              <span style={{
-                width: "6px",
-                height: "6px",
-                background: "#9ca3af",
-                borderRadius: "50%",
-                animation: "bounce 1.4s infinite ease-in-out 0.16s both"
-              }}></span>
-              <span style={{
-                width: "6px",
-                height: "6px",
-                background: "#9ca3af",
-                borderRadius: "50%",
-                animation: "bounce 1.4s infinite ease-in-out 0.32s both"
-              }}></span>
+              <span style={{ width: "6px", height: "6px", background: "#9ca3af", borderRadius: "50%", animation: "bounce 1.4s infinite ease-in-out both" }}></span>
+              <span style={{ width: "6px", height: "6px", background: "#9ca3af", borderRadius: "50%", animation: "bounce 1.4s infinite ease-in-out 0.16s both" }}></span>
+              <span style={{ width: "6px", height: "6px", background: "#9ca3af", borderRadius: "50%", animation: "bounce 1.4s infinite ease-in-out 0.32s both" }}></span>
             </div>
             <span>{typingUsers.length === 1 ? `${otherUser?.name || "User"} is typing...` : `${typingUsers.length} users are typing...`}</span>
           </div>
         )}
 
         {/* INPUT AREA */}
-        <div style={{background:"white",padding:"14px 16px",borderTop:"1px solid #e5e7eb",display:"flex",gap:"10px",alignItems:"center",flexShrink:0}}>
+        <div style={{
+          background: "white", padding: "14px 16px", borderTop: "1px solid #e5e7eb",
+          display: "flex", gap: "10px", alignItems: "center", flexShrink: 0,
+          zIndex: 60, position: "relative"
+        }}>
           <input type="file" accept="image/*" ref={fileInputRef} onChange={handleImageUpload} style={{display:"none"}}/>
           
-          {/* IMAGE UPLOAD BUTTON */}
-          <button 
-            className="image-upload-btn"
-            onClick={()=>fileInputRef.current?.click()} 
-            disabled={uploadingImage} 
-            title="Upload Image"
-          >
-            {uploadingImage ? (
-              <Loader2 size={20} color="#d97706" style={{animation:"spin 1s linear infinite"}}/>
-            ) : (
-              <Paperclip size={20} color="#6b7280" />
-            )}
+          <button className="image-upload-btn" onClick={()=>fileInputRef.current?.click()} disabled={uploadingImage} title="Upload Image">
+            {uploadingImage ? <Loader2 size={20} color="#d97706" style={{animation:"spin 1s linear infinite"}}/> : <Paperclip size={20} color="#6b7280" />}
           </button>
 
           <input 
-            type="text" 
-            value={newMessage} 
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }} 
-            onKeyPress={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSendMessage();
-              }
-            }} 
+            type="text" value={newMessage} 
+            onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }} 
+            onKeyPress={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSendMessage(); } }} 
             placeholder="Type a message..." 
             style={{flex:1,padding:"10px 14px",border:"2px solid #e5e7eb",borderRadius:"20px",fontSize:"0.95rem",outline:"none",background:"#f9fafb"}}
           />

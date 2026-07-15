@@ -2,7 +2,6 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import AIHelpChatbot from "@/components/AIHelpChatbot";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -24,7 +23,9 @@ export default function RootLayout({
         <main className="min-h-screen">
           {children}
         </main>
-        <Footer />
+        
+        {/* ✅ Footer hata diya hai. Ab ye sirf homepage (page.tsx) par dikhega */}
+        
         {/* ✅ AI HELP CHATBOT - Har page par dikhega */}
         <AIHelpChatbot />
       </body>
